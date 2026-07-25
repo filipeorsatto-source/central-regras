@@ -258,9 +258,13 @@ function epill(gen,res){const e=effVal(gen,res),c=effColor(e);return `<span clas
 
 // ---- stats header ----
 function buildStats(){const m=DATA.meta,s=document.getElementById('stats');s.innerHTML='';
+ const lm=m.lastmonth||{alerts:m.alerts_total,valor:m.grandValor,eff:(m.grandGen?m.grandRes/m.grandGen:0),label:''};
+ const suf=lm.label?' ('+lm.label+')':'';
  [['Regras',m.general+m.operator],['Categorias',m.n_categories],['Escopos',m.n_scopes],
-  ['Hospitais',DATA.hosps.length],['Alertas (3m)',m.alerts_total.toLocaleString('pt-BR')],
-  ['Valor apontado',money(m.grandValor)],['Efetividade global',pct(m.grandRes/m.grandGen)]]
+  ['Hospitais',DATA.hosps.length],
+  ['Alertas'+suf,lm.alerts.toLocaleString('pt-BR')],
+  ['Valor apontado'+suf,money(lm.valor)],
+  ['Efetividade'+suf,pct(lm.eff)]]
  .forEach(([l,v])=>{const d=el('div','stat');d.innerHTML=`<b>${v}</b><span>${l}</span>`;s.appendChild(d);});}
 
 // ---- shared tree builder (central + operadoras) ----
