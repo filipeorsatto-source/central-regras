@@ -472,9 +472,9 @@ function startSync(){
 // write helpers — atualização OTIMISTA local + Firebase (quando disponível)
 function fbErr(e){const el=document.getElementById('fb-status');if(el)el.innerHTML='<span class="fbdot off"></span> Sem permissão de escrita — ajuste as Regras do Firebase';console.warn('FB write:',(e&&e.message)||e);}
 function wGeralTier(att,key,val){SHARED.geralOv[att]=SHARED.geralOv[att]||{};SHARED.geralOv[att][key]=val;
- if(HAVE_FB)DB.ref('geral/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();renderActive();}
+ if(HAVE_FB)DB.ref('geral/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wTabTier(tab,att,key,val){const t=SHARED.tabs[tab];if(!t)return;t.ov[att]=t.ov[att]||{};t.ov[att][key]=val;
- if(HAVE_FB)DB.ref('tabs/'+tab+'/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();renderActive();}
+ if(HAVE_FB)DB.ref('tabs/'+tab+'/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wDelScope(tab,key){const t=SHARED.tabs[tab];if(!t)return;t.delS[key]=true;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delS/'+encK(key)).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
 function wDelAtt(tab,att){const t=SHARED.tabs[tab];if(!t)return;t.delA[att]=true;
@@ -517,7 +517,10 @@ function curTier(id,att,key){
  if(id==='geral'){const ov=SHARED.geralOv[att]&&SHARED.geralOv[att][key];if(ov!=null)return ov==='NA'?null:ov;const m=DATA.geralMatrix[att];return m?(m[key]||null):null;}
  const c=SHARED.tabs[id];const ov=c&&c.ov[att]&&c.ov[att][key];if(ov!=null)return ov==='NA'?null:ov;return curTier('geral',att,key);}
 function cycleTier(id,att,key){const cur=curTier(id,att,key);const order=[null,'Essencial','Avançado','Completo'];const nxt=order[(order.indexOf(cur)+1)%4];const val=nxt===null?'NA':nxt;
- if(id==='geral')wGeralTier(att,key,val);else wTabTier(id,att,key,val);}
+ if(id==='geral')wGeralTier(att,key,val);else wTabTier(id,att,key,val);
+ const eff=(val==='NA')?null:val;const chips=document.querySelectorAll('#mxwrap .tchip[data-att]');
+ for(let i=0;i<chips.length;i++){const c=chips[i];if(c.dataset.att===att&&c.dataset.key===key){c.className='tchip '+tierCls(eff);c.textContent=tierAbbr(eff);c.title=eff||'não aplicável';break;}}
+ if(id!=='geral')refreshSummaryInline(id);}
 
 function renderSubtabs(){const bar=document.getElementById('subtabs');let h='';
  h+=`<div class="subtab ${UI.active==='geral'?'active':''}" data-id="geral">Geral</div>`;
@@ -554,11 +557,15 @@ function renderEscopos(){renderSubtabs();
    const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
    h+=`<tr><th class="rowh">${mark}${esc(s.escopo)}${op}${del}</th>`;
    atts.forEach(a=>{h+=`<td>${tchip(curTier(id,a.id,s.key),true,a.id,s.key)}</td>`;});h+='</tr>';});});
- h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
+ h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}});
  cont.querySelectorAll('.tchip[data-att]').forEach(el=>el.onclick=()=>cycleTier(id,el.dataset.att,el.dataset.key));
  if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
   cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=()=>wDelScope(id,el.dataset.dels));
   cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=()=>wDelAtt(id,el.dataset.dela));}}
+function refreshSummaryInline(id){const isGeral=id==='geral';if(isGeral)return;const c=SHARED.tabs[id];if(!c)return;
+ const atts=viewAtts(id);const groups=viewScopes(id);const html=renderSummary(id,atts,groups,c.client);
+ const cont=document.getElementById('escopos-view');const cur=cont&&cont.querySelector('.sumtable');
+ if(cur){const wrap=cur.closest('.mx-wrap');const tmp=document.createElement('div');tmp.innerHTML=html;const nw=tmp.querySelector('.mx-wrap');if(wrap&&nw)wrap.parentNode.replaceChild(nw,wrap);}}
 function renderSummary(id,atts,groups,client){
  let h='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Resumo (tem/total)</th>';
  atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
