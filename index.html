@@ -615,7 +615,7 @@ function hospTierFor(hosp,att,key){const tabId=tabsOrder().find(id=>SHARED.tabs[
 function renderPlanoSummary(){
  const tabs=tabsOrder();const mode=UI.planoSumMode||'abs';const f=UI.planoSumFilter||{'Essencial':true,'Avançado':true,'Completo':true};
  let h='<div class="section-title" style="font-size:15px;margin-bottom:8px">Resumo de cobertura por hospital</div>';
- h+='<div class="toolrow" style="margin-bottom:8px"><span class="tglabel">Métrica:</span><div class="toggle" id="psum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div><span class="tglabel" style="margin-left:8px">Tiers:</span>';
+ h+='<div class="toolrow" style="margin-bottom:8px"><span class="tglabel">Métrica:</span><div class="toggle" id="psum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button><button class="'+(mode==='eff'?'active':'')+'" data-m="eff">Efetividade</button></div><span class="tglabel" style="margin-left:8px">Tiers:</span>';
  TIERS.forEach(tr=>h+='<span class="mchip '+(f[tr]?'on':'')+'" data-psf="'+tr+'">'+tr+'</span>');
  h+='</div>';
  if(!tabs.length){h+='<div class="empty">Crie visões de cliente na aba Análise Escopos para popular este resumo.</div>';return h+'<hr style="border:none;border-top:1px solid var(--line);margin:18px 0">';}
@@ -626,11 +626,12 @@ function renderPlanoSummary(){
    if(tab.delA&&tab.delA[a.id]){h+='<td style="color:var(--muted);font-weight:700">NA</td>';return;}
    let keys=DATA.scopeCatalog.filter(s=>!(tab.delS&&tab.delS[s.key])).map(s=>s.key);
    (tab.addS||[]).forEach(s=>keys.push(s.key));
-   let tot=0,have=0;keys.forEach(key=>{const tt=curTier(id,a.id,key);if(tt&&f[tt]){tot++;if(DATA.hospHas[tab.client]&&DATA.hospHas[tab.client][key])have++;}});
-   const p=tot?have/tot:0;
-   const val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
-   const st=tot===0?'color:var(--muted)':('background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700');
-   h+=`<td style="${st}">${val}</td>`;});
+   let tot=0,have=0,gen=0,res=0;const ss=SCOPE_STATS[tab.client]||{};
+   keys.forEach(key=>{const tt=curTier(id,a.id,key);if(tt&&f[tt]){tot++;if(DATA.hospHas[tab.client]&&DATA.hospHas[tab.client][key])have++;const st2=ss[key];if(st2){gen+=st2.gen;res+=st2.res;}}});
+   let val,style;
+   if(mode==='eff'){const e=gen>0?res/gen:null;if(e==null){val='—';style='color:var(--muted)';}else{val=Math.round(e*100)+'%';style='background:'+heatBg(e)+';color:'+heatFg(e)+';font-weight:700';}}
+   else{const p=tot?have/tot:0;if(tot===0){val='—';style='color:var(--muted)';}else{val=(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);style='background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700';}}
+   h+=`<td style="${style}" title="${mode==='eff'?res+' resolvidos / '+gen+' alertas':have+' de '+tot+' escopos'}">${val}</td>`;});
   h+='</tr>';});
  h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
 function renderPlano(){
