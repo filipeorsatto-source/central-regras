@@ -543,7 +543,7 @@ function renderEscopos(){renderSubtabs();
  else h+=`<span class="hint">Visão de <b>${esc(client)}</b> · ✔/✘ = hospital já tem o escopo. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-att">+ Adicionar Atendimento</button>`;
  h+='</div>';
  if(!isGeral)h+=renderSummary(id,atts,groups,client);
- h+='<div class="mx-wrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo \\ Atendimento</th>';
+ h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo \\ Atendimento</th>';
  const maxShare=Math.max.apply(null,DATA.attendance.map(x=>x.share))||1;
  atts.forEach(a=>{const sh=a.share>0?`<span class="att-share" style="${shareStyle(a.share,maxShare)}">${a.share}%</span>`:`<span class="att-share" style="color:var(--muted);background:#1c2537">novo</span>`;
   h+=`<th class="att-h" data-att="${a.id}">${!isGeral?`<span class="att-del" data-dela="${a.id}" title="excluir atendimento">✕</span>`:''}${sh}<span class="att-name">${esc(a.name)}</span>${compTip(a)}</th>`;});
@@ -554,7 +554,7 @@ function renderEscopos(){renderSubtabs();
    const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
    h+=`<tr><th class="rowh">${mark}${esc(s.escopo)}${op}${del}</th>`;
    atts.forEach(a=>{h+=`<td>${tchip(curTier(id,a.id,s.key),true,a.id,s.key)}</td>`;});h+='</tr>';});});
- h+='</tbody></table></div>';cont.innerHTML=h;
+ h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
  cont.querySelectorAll('.tchip[data-att]').forEach(el=>el.onclick=()=>cycleTier(id,el.dataset.att,el.dataset.key));
  if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
   cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=()=>wDelScope(id,el.dataset.dels));
