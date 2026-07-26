@@ -567,6 +567,8 @@ function renderEscopos(){renderSubtabs();
 function refreshSummaryInline(id){if(id==='geral')return;const c=SHARED.tabs[id];if(!c)return;
  const box=document.getElementById('esc-summary');if(!box)return;
  box.innerHTML=renderSummary(id,viewAtts(id),viewScopes(id),c.client);attachSummaryHandlers(id);}
+function heatBg(p){let r,g,b;if(p<0.5){const k=p/0.5;r=239+(245-239)*k;g=68+(158-68)*k;b=68+(11-68)*k;}else{const k=(p-0.5)/0.5;r=245+(34-245)*k;g=158+(197-158)*k;b=11+(94-11)*k;}return 'rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+',0.30)';}
+function heatFg(p){return p>=0.6?'#9bf0ba':p>=0.3?'#f8d977':'#ffa3a3';}
 function renderSummary(id,atts,groups,client){
  const mode=UI.escSumMode||'abs';let gHave=0,gTot=0;
  let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div><span class="penholder"></span></div>';
@@ -575,9 +577,10 @@ function renderSummary(id,atts,groups,client){
  TIERS.forEach(tier=>{h+=`<tr><td class="rh"><span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}</td>`;
   atts.forEach(a=>{let tot=0,have=0;groups.forEach(([cat,scs])=>scs.forEach(s=>{const t=curTier(id,a.id,s.key);if(t===tier){tot++;if(DATA.hospHas[client]&&DATA.hospHas[client][s.key])have++;}}));
    gHave+=have;gTot+=tot;
-   let col=tot===0?'var(--muted)':have===tot?'var(--green)':have===0?'var(--red)':'var(--amber)';
-   let val=tot===0?'—':(mode==='pct'?Math.round(have/tot*100)+'%':have+'/'+tot);
-   h+=`<td style="color:${col};font-weight:700">${val}</td>`;});
+   const p=tot?have/tot:0;
+   let val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
+   let st=tot===0?'color:var(--muted)':('background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700');
+   h+=`<td style="${st}">${val}</td>`;});
   h+='</tr>';});
  h+='</tbody></table></div>';
  const pen=gTot?Math.round(gHave/gTot*100):0;const pcol=pen>=80?'var(--green)':pen>=40?'var(--amber)':'var(--red)';
@@ -624,9 +627,10 @@ function renderPlanoSummary(){
    let keys=DATA.scopeCatalog.filter(s=>!(tab.delS&&tab.delS[s.key])).map(s=>s.key);
    (tab.addS||[]).forEach(s=>keys.push(s.key));
    let tot=0,have=0;keys.forEach(key=>{const tt=curTier(id,a.id,key);if(tt&&f[tt]){tot++;if(DATA.hospHas[tab.client]&&DATA.hospHas[tab.client][key])have++;}});
-   const col=tot===0?'var(--muted)':have===tot?'var(--green)':have===0?'var(--red)':'var(--amber)';
-   const val=tot===0?'—':(mode==='pct'?Math.round(have/tot*100)+'%':have+'/'+tot);
-   h+=`<td style="color:${col};font-weight:700">${val}</td>`;});
+   const p=tot?have/tot:0;
+   const val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
+   const st=tot===0?'color:var(--muted)':('background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700');
+   h+=`<td style="${st}">${val}</td>`;});
   h+='</tr>';});
  h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
 function renderPlano(){
