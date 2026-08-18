@@ -145,6 +145,8 @@ header{position:relative}
 .sumtable th{background:var(--panel2);color:var(--muted);font-size:11px}
 .sumtable td.rh{text-align:left;font-weight:700}
 .sumtable th.rh{text-align:left}
+.sumtable .ttcol{border-right:2px solid var(--line);font-weight:800}
+.sumtable th.ttcol{color:var(--fg);letter-spacing:.5px}
 .mchip{display:inline-block;padding:3px 10px;border-radius:16px;border:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);background:var(--panel2)}
 .mchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .plano-month{font-size:15px;font-weight:800;margin:20px 0 8px;color:var(--accent2)}
@@ -572,16 +574,19 @@ function heatFg(p){return p>=0.6?'#9bf0ba':p>=0.3?'#f8d977':'#ffa3a3';}
 function renderSummary(id,atts,groups,client){
  const mode=UI.escSumMode||'abs';let gHave=0,gTot=0;
  let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div><span class="penholder"></span></div>';
- h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Cobertura</th>';
+ h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Cobertura</th><th class="ttcol" title="Total da tabela — todos os tipos de conta somados">TT</th>';
  atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
- TIERS.forEach(tier=>{h+=`<tr><td class="rh"><span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}</td>`;
+ TIERS.forEach(tier=>{let cells='',rowHave=0,rowTot=0;
   atts.forEach(a=>{let tot=0,have=0;groups.forEach(([cat,scs])=>scs.forEach(s=>{const t=curTier(id,a.id,s.key);if(t===tier){tot++;if(DATA.hospHas[client]&&DATA.hospHas[client][s.key])have++;}}));
-   gHave+=have;gTot+=tot;
+   gHave+=have;gTot+=tot;rowHave+=have;rowTot+=tot;
    const p=tot?have/tot:0;
    let val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
    let st=tot===0?'color:var(--muted)':('background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700');
-   h+=`<td style="${st}">${val}</td>`;});
-  h+='</tr>';});
+   cells+=`<td style="${st}">${val}</td>`;});
+  const rp=rowTot?rowHave/rowTot:0;
+  const rowVal=rowTot===0?'—':(mode==='pct'?Math.round(rp*100)+'%':rowHave+'/'+rowTot);
+  const rowSt=rowTot===0?'color:var(--muted)':('background:'+heatBg(rp)+';color:'+heatFg(rp)+';font-weight:800');
+  h+=`<tr><td class="rh"><span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}</td><td class="ttcol" style="${rowSt}" title="${tier} · total de todos os tipos de conta">${rowVal}</td>`+cells+'</tr>';});
  h+='</tbody></table></div>';
  const pen=gTot?Math.round(gHave/gTot*100):0;const pcol=pen>=80?'var(--green)':pen>=40?'var(--amber)':'var(--red)';
  h=h.replace('<span class="penholder"></span>',`<span class="pencard" title="Escopos cobertos ÷ total de escopos classificados para este hospital"><b style="color:${pcol}">${pen}%</b> penetração <span class="mono-sm">(${gHave}/${gTot} escopos)</span></span>`);
