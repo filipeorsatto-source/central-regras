@@ -163,7 +163,7 @@ header{position:relative}
 <header><div class="wrap">
  <div class="userbar" id="userbar" style="display:none"><span id="user-email" class="mono-sm"></span><button class="btn-sec" id="logout-btn">Sair</button></div>
  <h1>Central de Regras de Auditoria Hospitalar</h1>
- <p>Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — 6 clientes</p>
+ <p id="subhead">Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras</p>
  <div class="stats" id="stats"></div>
 </div></header>
 <div class="wrap">
@@ -248,7 +248,9 @@ header{position:relative}
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
 let DATA=null;
-const HOSP_COLORS={'Einstein':'#4f8cff','HAOC':'#a78bfa','HCOR':'#f472b6','Sírio BSB':'#2dd4bf','Sírio SP':'#fbbf24','AC Camargo':'#a3e635'};
+const HOSP_COLORS={'Einstein':'#4f8cff','HAOC':'#a78bfa','HCOR':'#f472b6','Sírio BSB':'#2dd4bf','Sírio SP':'#fbbf24','AC Camargo':'#a3e635','POC':'#f97316'};
+const HOSP_FALLBACK=['#38bdf8','#c084fc','#fb7185','#34d399','#facc15','#84cc16','#f97316','#e879f9','#22d3ee','#fb923c'];
+function hospColor(h){if(HOSP_COLORS[h])return HOSP_COLORS[h];const i=((DATA&&DATA.hosps)?DATA.hosps.indexOf(h):-1);return HOSP_FALLBACK[(i<0?0:i)%HOSP_FALLBACK.length];}
 let GV=0;
 function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
 function esc(s){return (s==null?'':''+s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
@@ -274,7 +276,7 @@ function buildStats(){const m=DATA.meta,s=document.getElementById('stats');s.inn
 // ---- shared tree builder (central + operadoras) ----
 function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);
  return `<tr><td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td>
-  <td><span class="hosp-badge" style="color:${HOSP_COLORS[r.hosp]||'#93a1bd'}">${esc(r.hosp)}</span></td>
+  <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span></td>
   <td class="num">${pct(r.valor/GV,2)}</td>
   <td class="num" style="color:${c};font-weight:700">${e==null?'—':pct(e)}</td>
   <td class="num muted">${r.gen.toLocaleString('pt-BR')}</td></tr>`;}
@@ -336,7 +338,7 @@ function hospTotals(h){let num=0,den=0;DATA.coverage.categories.forEach(c=>{cons
 function buildCovSummary(){const s=document.getElementById('covsummary');s.innerHTML='';
  DATA.hosps.forEach(h=>{const t=hospTotals(h),p=t.p,col=covColor(p);
   const c=el('div','covcard');
-  c.innerHTML=`<div class="h"><i class="dot" style="background:${HOSP_COLORS[h]}"></i>${esc(h)}</div>
+  c.innerHTML=`<div class="h"><i class="dot" style="background:${hospColor(h)}"></i>${esc(h)}</div>
    <div class="big" style="color:${col}">${COVM==='abs'?fmtCell(t.num,t.den):Math.round(p*100)+'%'}</div>
    <div class="sub">${Math.round(p*100)}% de cobertura geral${COVE?' (c/ efetividade)':''}</div>
    <div class="cov-bar"><i style="width:${Math.round(p*100)}%;background:${col}"></i></div>`;s.appendChild(c);});}
@@ -419,7 +421,7 @@ function buildTodas(){
  let head='<thead><tr>'+TCOLS.map(([k,l])=>`<th data-k="${k}">${l}${tsort.key===k?` <span class="sarr">${tsort.dir>0?'▲':'▼'}</span>`:''}</th>`).join('')+'</tr></thead>';
  let body='<tbody>'+rows.slice(0,1500).map(r=>{const e=effVal(r.gen,r.res);return `<tr>
    <td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td>
-   <td><span class="hosp-badge" style="color:${HOSP_COLORS[r.hosp]}">${esc(r.hosp)}</span></td>
+   <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span></td>
    <td>${esc(r.cat)}</td><td class="muted">${esc(r.escopo)}</td><td>${r.op?esc(r.op):'<span class="muted">—</span>'}</td>
    <td class="num">${r.gen.toLocaleString('pt-BR')}</td><td class="num">${r.res.toLocaleString('pt-BR')}</td>
    <td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td>
@@ -721,6 +723,7 @@ function bootData(){
 }
 function initApp(){
  GV=DATA.meta.grandValor;buildScopeStats();buildStats();
+ (function(){const sh=document.getElementById("subhead");if(sh){const n=(DATA.hosps||[]).length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;fhosp.appendChild(o);});
  Object.keys(DATA.operators).forEach(op=>{let rs=[];Object.values(DATA.operators[op]).forEach(c=>Object.values(c).forEach(v=>rs=rs.concat(v)));const o=el('option');o.value=op;o.textContent=op+' ('+rs.length+')';opsel.appendChild(o);});
  DATA.cat_order.forEach(c=>{const o=el('option');o.value=c;o.textContent=c;tfcat.appendChild(o);});
