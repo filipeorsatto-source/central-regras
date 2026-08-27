@@ -90,6 +90,9 @@ table.mx th,table.mx td{border-bottom:1px solid #202a41;border-right:1px solid #
 table.mx thead th{position:sticky;top:0;background:var(--panel2);z-index:3;vertical-align:bottom;font-size:11px;font-weight:600;color:var(--muted)}
 table.mx th.rowh{position:sticky;left:0;background:var(--panel2);z-index:2;text-align:left;min-width:280px;max-width:280px;white-space:normal}
 table.mx thead th.corner{position:sticky;left:0;top:0;z-index:5;text-align:left}
+table.mx th.valh,table.mx td.valcol{position:sticky;left:280px;background:var(--panel2);z-index:2;text-align:center;min-width:96px;max-width:96px}
+table.mx thead th.valh{top:0;z-index:5}
+table.mx td.chkcol{text-align:center}
 table.mx tr.catrow td{position:sticky;left:0;background:#141c2e;text-align:left;font-weight:700;color:var(--accent2);z-index:1;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
 table.mx tr.subcatrow td{position:sticky;left:0;background:#101725;text-align:left;font-weight:600;color:var(--muted);z-index:1;font-size:11px;padding-left:22px}
 .att-h{cursor:help;position:relative;min-width:108px;max-width:132px;white-space:normal;word-break:break-word;line-height:1.2;vertical-align:bottom;padding-top:8px}
@@ -165,6 +168,7 @@ header{position:relative}
  <h1>Central de Regras de Auditoria Hospitalar</h1>
  <p id="subhead">Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras</p>
  <div class="stats" id="stats"></div>
+ <p class="hint" id="basecov" style="margin-top:10px"></p>
 </div></header>
 <div class="wrap">
  <nav>
@@ -230,9 +234,9 @@ header{position:relative}
   </section>
   <section id="tab-escopos" style="display:none">
    <div class="section-title">Análise de escopos por tipo de atendimento</div>
-   <p class="muted" style="margin-bottom:6px">Para cada tipo de atendimento, quais escopos de regra são <b>Essencial</b>, <b>Avançado</b> ou <b>Completo</b>. Passe o mouse no cabeçalho do atendimento para ver a composição estimada da conta.</p>
-   <p class="hint" style="margin-bottom:12px">⚠ Composição das contas e peso de faturamento são <b>estimativas de mercado</b> (ainda sem a base histórica real).</p>
-   <div class="legend-tier"><span class="tchip t-ess">E</span> Essencial <span class="tchip t-adv">A</span> Avançado <span class="tchip t-comp">C</span> Completo <span class="tchip t-na">—</span> não aplicável &nbsp;·&nbsp; <span class="chk-ok">✔</span>/<span class="chk-no">✘</span> hospital tem o escopo na base</div>
+   <p class="muted" style="margin-bottom:6px">Para cada escopo, a <b>Validação</b> (Essencial, Avançado ou NA) e em quais tipos de atendimento ele está classificado. Passe o mouse no cabeçalho do atendimento para ver a composição estimada da conta.</p>
+   <p class="hint" style="margin-bottom:12px">⚠ Composição das contas e peso de faturamento seguem sendo <b>estimativas de mercado</b> — a base de alertas não traz tipo de atendimento. Já a <b>presença de escopo</b> e a <b>efetividade</b> vêm da base real de alertas <span id="hint-periodo"></span>.</p>
+   <div class="legend-tier"><span class="tchip t-ess">E</span> Essencial <span class="tchip t-adv">A</span> Avançado <span class="tchip t-na">—</span> NA (não aplicável) &nbsp;·&nbsp; <span class="chk-ok">✔</span>/<span class="chk-no">✘</span> escopo classificado naquele tipo de atendimento</div>
    <div class="subtabs" id="subtabs"></div>
    <div id="escopos-view"></div>
   </section>
@@ -265,13 +269,21 @@ function epill(gen,res){const e=effVal(gen,res),c=effColor(e);return `<span clas
 // ---- stats header ----
 function buildStats(){const m=DATA.meta,s=document.getElementById('stats');s.innerHTML='';
  const lm=m.lastmonth||{alerts:m.alerts_total,valor:m.grandValor,eff:(m.grandGen?m.grandRes/m.grandGen:0),label:''};
- const suf=lm.label?' ('+lm.label+')':'';
+ const suf=lm.label?' ('+lm.label+(lm.parcial?' parcial':'')+')':'';
  [['Regras',m.general+m.operator],['Categorias',m.n_categories],['Escopos',m.n_scopes],
   ['Hospitais',DATA.hosps.length],
   ['Alertas'+suf,lm.alerts.toLocaleString('pt-BR')],
   ['Valor apontado'+suf,money(lm.valor)],
   ['Efetividade'+suf,pct(lm.eff)]]
- .forEach(([l,v])=>{const d=el('div','stat');d.innerHTML=`<b>${v}</b><span>${l}</span>`;s.appendChild(d);});}
+ .forEach(([l,v])=>{const d=el('div','stat');d.innerHTML=`<b>${v}</b><span>${l}</span>`;s.appendChild(d);});
+ buildBaseCov();}
+const MES_ABREV=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function mesLabel(ym){const p=(ym||'').split('/');return p.length===2?MES_ABREV[(+p[1])-1]+'/'+p[0].slice(2):ym;}
+function buildBaseCov(){const e=document.getElementById('basecov');if(!e)return;
+ const p=DATA.meta.periodo;if(!p){e.textContent='';return;}
+ const dia=p.ate_dia?(' \u00b7 \u00faltimo alerta auditado em '+p.ate_dia.split('-').reverse().slice(0,2).join('/')+(p.parcial?' (m\u00eas em curso)':'')):'';
+ e.innerHTML='Base de alertas: <b>'+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+'</b> \u00b7 '
+  +DATA.meta.grandGen.toLocaleString('pt-BR')+' alertas \u00b7 '+money(DATA.meta.grandValor)+' apontados'+dia;}
 
 // ---- shared tree builder (central + operadoras) ----
 function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);
@@ -436,7 +448,23 @@ document.getElementById('tfalert').onchange=e=>{tf.alert=e.target.value;buildTod
 
 // ======================= ESTADO EDITÁVEL (Firebase RTDB, tempo real) =======================
 const TIERS=['Essencial','Avançado','Completo'];
-const MONTHS=['Jul','Ago','Set','Out','Nov','Dez'];
+let MONTHS=['Jul','Ago','Set','Out','Nov','Dez'];
+// rollout comeca no mes seguinte ao ultimo mes com dado na base
+function buildMonths(){
+ const ate=(DATA&&DATA.meta&&DATA.meta.periodo&&DATA.meta.periodo.ate)||'';
+ const i=ate?parseInt(ate.slice(-2),10):7;   // 1-12
+ const out=[];for(let k=0;k<6;k++)out.push(MES_ABREV[(i+k)%12]);
+ MONTHS=out;}
+// mantem meses ja escolhidos no plano mesmo que fiquem fora da janela atual
+function monthOptions(){
+ const set=MONTHS.slice();
+ // meses ja escolhidos que ficaram fora da janela entram ANTES, na ordem do calendario
+ const antes=[];
+ Object.values((SHARED.plano&&SHARED.plano.months)||{}).forEach(m=>{
+  if(m&&set.indexOf(m)<0&&antes.indexOf(m)<0)antes.push(m);});
+ const ini=MES_ABREV.indexOf(MONTHS[0]);
+ antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
+ return antes.concat(set);}
 let SHARED={geralOv:{},tabs:{},plano:{months:{}}};
 function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true,'Completo':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true,'Completo':true}};
  try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)return Object.assign(d,s);}catch(e){}return d;}
@@ -527,6 +555,17 @@ function cycleTier(id,att,key){const cur=curTier(id,att,key);const order=[null,'
  const eff=(val==='NA')?null:val;const chips=document.querySelectorAll('#mxwrap .tchip[data-att]');
  for(let i=0;i<chips.length;i++){const c=chips[i];if(c.dataset.att===att&&c.dataset.key===key){c.className='tchip '+tierCls(eff);c.textContent=tierAbbr(eff);c.title=eff||'não aplicável';break;}}
  if(id!=='geral')refreshSummaryInline(id);}
+// ---- Validação (coluna única por escopo, aba "Análise de escopos") ----
+// Reaproveita exatamente os mesmos dados/curTier por atendimento; "Completo" é
+// tratado como "Avançado" apenas para exibição/edição nesta coluna (sem criar
+// nenhum dado novo — os valores originais gravados continuam nos mesmos locais).
+function escDisplayTier(t){return t==='Completo'?'Avançado':t;}
+const ESC_TIERS=['Essencial','Avançado']; // usado apenas no resumo da aba "Análise de escopos" — sem "Completo"
+function escValidation(id,key,atts){if(!atts||!atts.length)return null;return escDisplayTier(curTier(id,atts[0].id,key));}
+function cycleEscVal(id,key,atts){const cur=escValidation(id,key,atts);const order=[null,'Essencial','Avançado'];const nxt=order[(order.indexOf(cur)+1)%3];const val=nxt===null?'NA':nxt;
+ atts.forEach(a=>{if(id==='geral')wGeralTier(a.id,key,val);else wTabTier(id,a.id,key,val);});
+ if(id!=='geral')refreshSummaryInline(id);
+ renderEscopos();}
 
 function renderSubtabs(){const bar=document.getElementById('subtabs');let h='';
  h+=`<div class="subtab ${UI.active==='geral'?'active':''}" data-id="geral">Geral</div>`;
@@ -548,23 +587,27 @@ function renderEscopos(){renderSubtabs();
  if(!isGeral&&!c){UI.active='geral';saveUI();return renderEscopos();}
  const client=isGeral?null:c.client;const atts=viewAtts(id);const groups=viewScopes(id);const cont=document.getElementById('escopos-view');
  let h='<div class="toolrow"><span class="fbstat" id="fb-status">'+fbBadge()+'</span>';
- if(isGeral)h+=`<span class="hint">Classificação global editável — clique nas células (Essencial → Avançado → Completo → —). Sincroniza em tempo real para todos.</span>`;
+ if(isGeral)h+=`<span class="hint">Classificação global editável — clique na Validação (Essencial → Avançado → —). Sincroniza em tempo real para todos.</span>`;
  else h+=`<span class="hint">Visão de <b>${esc(client)}</b> · ✔/✘ = hospital já tem o escopo. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-att">+ Adicionar Atendimento</button>`;
  h+='</div>';
  if(!isGeral)h+='<div id="esc-summary">'+renderSummary(id,atts,groups,client)+'</div>';
- h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo \\ Atendimento</th>';
+ h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo</th><th class="valh">Validação</th>';
  const maxShare=Math.max.apply(null,DATA.attendance.map(x=>x.share))||1;
  atts.forEach(a=>{const sh=a.share>0?`<span class="att-share" style="${shareStyle(a.share,maxShare)}">${a.share}%</span>`:`<span class="att-share" style="color:var(--muted);background:#1c2537">novo</span>`;
   h+=`<th class="att-h" data-att="${a.id}">${!isGeral?`<span class="att-del" data-dela="${a.id}" title="excluir atendimento">✕</span>`:''}${sh}<span class="att-name">${esc(a.name)}</span>${compTip(a)}</th>`;});
  h+='</tr></thead><tbody>';
- groups.forEach(([cat,scs])=>{h+=`<tr class="catrow"><td colspan="${atts.length+1}">${esc(cat)}</td></tr>`;
+ groups.forEach(([cat,scs])=>{h+=`<tr class="catrow"><td colspan="${atts.length+2}">${esc(cat)}</td></tr>`;
   scs.forEach(s=>{const mark=isGeral?'':(DATA.hospHas[client]&&DATA.hospHas[client][s.key]?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>');
    const op=s.op?`<span class="oplabel">${esc(s.op)}</span>`:'';
    const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
    h+=`<tr><th class="rowh">${mark}${esc(s.escopo)}${op}${del}</th>`;
-   atts.forEach(a=>{h+=`<td>${tchip(curTier(id,a.id,s.key),true,a.id,s.key)}</td>`;});h+='</tr>';});});
+   const vt=escValidation(id,s.key,atts);
+   h+=`<td class="valcol"><span class="tchip" data-esckey="${esc(s.key)}" title="${vt||'não aplicável'}">${tierAbbr(vt)}</span></td>`;
+   atts.forEach(a=>{const t=curTier(id,a.id,s.key);const has=t!=null;
+    h+=`<td class="chkcol">${has?`<span class="chk-ok" title="${esc(escDisplayTier(t))}">✔</span>`:'<span class="chk-no">✘</span>'}</td>`;});
+   h+='</tr>';});});
  h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}});
- cont.querySelectorAll('.tchip[data-att]').forEach(el=>el.onclick=()=>cycleTier(id,el.dataset.att,el.dataset.key));
+ cont.querySelectorAll('.tchip[data-esckey]').forEach(el=>{const cls=tierCls(escValidation(id,el.dataset.esckey,atts));el.className='tchip '+cls;el.onclick=()=>cycleEscVal(id,el.dataset.esckey,atts);});
  if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
   cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=()=>wDelScope(id,el.dataset.dels));
   cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=()=>wDelAtt(id,el.dataset.dela));attachSummaryHandlers(id);}}
@@ -578,8 +621,8 @@ function renderSummary(id,atts,groups,client){
  let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div><span class="penholder"></span></div>';
  h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Cobertura</th><th class="ttcol" title="Total da tabela — todos os tipos de conta somados">TT</th>';
  atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
- TIERS.forEach(tier=>{let cells='',rowHave=0,rowTot=0;
-  atts.forEach(a=>{let tot=0,have=0;groups.forEach(([cat,scs])=>scs.forEach(s=>{const t=curTier(id,a.id,s.key);if(t===tier){tot++;if(DATA.hospHas[client]&&DATA.hospHas[client][s.key])have++;}}));
+ ESC_TIERS.forEach(tier=>{let cells='',rowHave=0,rowTot=0;
+  atts.forEach(a=>{let tot=0,have=0;groups.forEach(([cat,scs])=>scs.forEach(s=>{const t=escDisplayTier(curTier(id,a.id,s.key));if(t===tier){tot++;if(DATA.hospHas[client]&&DATA.hospHas[client][s.key])have++;}}));
    gHave+=have;gTot+=tot;rowHave+=have;rowTot+=tot;
    const p=tot?have/tot:0;
    let val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
@@ -646,7 +689,7 @@ function renderPlano(){
  let h=renderPlanoSummary()+'<div class="mx-wrap" style="max-height:none;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th><th>Grupo</th><th>% faturamento (est.)</th><th>Mês de rollout</th></tr></thead><tbody>';
  atts.forEach(a=>{const cur=SHARED.plano.months[a.id]||'';const added=!DATA.geralMatrix[a.id];
   h+=`<tr><td class="rh">${esc(a.name)}${added?' <span class="oplabel" style="background:#16233f;border-color:#294066;color:#8bb4ff">novo</span>':''}</td><td class="mono-sm">${a.group}</td><td style="font-weight:700">${a.share>0?a.share+'%':'—'}</td>
-   <td><select class="mon-sel" data-mon="${a.id}"><option value="">—</option>${MONTHS.map(m=>`<option ${cur===m?'selected':''}>${m}</option>`).join('')}</select></td></tr>`;});
+   <td><select class="mon-sel" data-mon="${a.id}"><option value="">—</option>${monthOptions().map(m=>`<option ${cur===m?'selected':''}>${m}</option>`).join('')}</select></td></tr>`;});
  h+='</tbody></table></div>';
  h+='<div class="toolrow"><button class="btn-primary" id="btn-gerar">Gerar Plano</button><button class="btn-sec" id="btn-refresh">↻ Atualizar setores</button></div><div id="plano-output"></div>';
  cont.innerHTML=h;
@@ -664,7 +707,7 @@ function renderPlanoOutput(){
  TIERS.forEach(t=>h+=`<span class="mchip ${f[t]?'on':''}" data-f="${t}">${t}</span>`);
  h+=(mode==='presenca'?' <span class="hint"><span class="chk-ok">✔</span> hospital já tem · <span class="chk-no">✘</span> a implementar · <b>NA</b> fora do filtro</span>':' <span class="hint">efetividade do escopo no hospital · <b>Sem alertas</b> = tem o escopo mas nada foi gerado · <b>NA</b> = tier fora do filtro</span>')+'</div>';
  let any=false;
- MONTHS.forEach(m=>{
+ monthOptions().forEach(m=>{
   const atts=planoAtts().filter(a=>SHARED.plano.months[a.id]===m);
   if(!atts.length)return;let body='';
   atts.forEach(a=>{
@@ -722,8 +765,10 @@ function bootData(){
  }).catch(e=>showFatal('Erro ao ler a base do Firebase: '+((e&&e.message)||e)));
 }
 function initApp(){
- GV=DATA.meta.grandValor;buildScopeStats();buildStats();
+ GV=DATA.meta.grandValor;buildMonths();buildScopeStats();buildStats();
  (function(){const sh=document.getElementById("subhead");if(sh){const n=(DATA.hosps||[]).length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
+ (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
+   if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;fhosp.appendChild(o);});
  Object.keys(DATA.operators).forEach(op=>{let rs=[];Object.values(DATA.operators[op]).forEach(c=>Object.values(c).forEach(v=>rs=rs.concat(v)));const o=el('option');o.value=op;o.textContent=op+' ('+rs.length+')';opsel.appendChild(o);});
  DATA.cat_order.forEach(c=>{const o=el('option');o.value=c;o.textContent=c;tfcat.appendChild(o);});
