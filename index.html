@@ -465,7 +465,7 @@ function monthOptions(){
  const ini=MES_ABREV.indexOf(MONTHS[0]);
  antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
  return antes.concat(set);}
-let SHARED={geralOv:{},tabs:{},plano:{months:{}}};
+let SHARED={geralOv:{},geralEscVal:{},tabs:{},plano:{months:{}}};
 function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true,'Completo':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true,'Completo':true}};
  try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)return Object.assign(d,s);}catch(e){}return d;}
 let UI=loadUI();
@@ -480,10 +480,11 @@ let HAVE_FB=false,DB=null;
  if(!firebase.apps.length)firebase.initializeApp(cfg);
  DB=firebase.database();HAVE_FB=true;
 }catch(e){console.warn('Firebase init falhou',e);HAVE_FB=false;}})();
-function loadSharedLocal(){try{const s=JSON.parse(localStorage.getItem('rivio_shared_v1'));if(s)SHARED=Object.assign({geralOv:{},tabs:{},plano:{months:{}}},s);}catch(e){}}
+function loadSharedLocal(){try{const s=JSON.parse(localStorage.getItem('rivio_shared_v1'));if(s)SHARED=Object.assign({geralOv:{},geralEscVal:{},tabs:{},plano:{months:{}}},s);}catch(e){}}
 function persistSharedLocal(){try{localStorage.setItem('rivio_shared_v1',JSON.stringify(SHARED));}catch(e){}}
 function decodeOv(raw){const o={};if(raw)for(const att in raw){o[att]={};for(const ek in raw[att])o[att][decK(ek)]=raw[att][ek];}return o;}
-function decodeTabs(raw){const o={};if(raw)for(const id in raw){const c=raw[id]||{};const t={client:c.client||'',name:c.name||c.client||id,ov:decodeOv(c.ov),delS:{},delA:c.delA||{},addS:[],addA:[]};
+function decodeFlat(raw){const o={};if(raw)for(const ek in raw)o[decK(ek)]=raw[ek];return o;}
+function decodeTabs(raw){const o={};if(raw)for(const id in raw){const c=raw[id]||{};const t={client:c.client||'',name:c.name||c.client||id,ov:decodeOv(c.ov),escVal:decodeFlat(c.escVal),delS:{},delA:c.delA||{},addS:[],addA:[]};
  if(c.delS)for(const ek in c.delS)t.delS[decK(ek)]=true;
  if(c.addS)for(const pid in c.addS){const s=c.addS[pid];t.addS.push({key:s.key,cat:s.cat,escopo:s.escopo,op:s.op||''});}
  if(c.addA)for(const pid in c.addA){const a=c.addA[pid];t.addA.push({id:pid,name:a.name,group:a.group,share:0,comp:{}});}
@@ -498,6 +499,7 @@ function fbReadErr(e){const el=document.getElementById('fb-status');if(el)el.inn
 function startSync(){
  if(HAVE_FB){
   DB.ref('geral/ov').on('value',s=>{SHARED.geralOv=decodeOv(s.val());renderActive();},fbReadErr);
+  DB.ref('geral/escVal').on('value',s=>{SHARED.geralEscVal=decodeFlat(s.val());renderActive();},fbReadErr);
   DB.ref('tabs').on('value',s=>{SHARED.tabs=decodeTabs(s.val());renderActive();},fbReadErr);
   DB.ref('plano/months').on('value',s=>{SHARED.plano.months=s.val()||{};renderActive();},fbReadErr);
   DB.ref('.info/connected').on('value',s=>{CONN=!!s.val();const e=document.getElementById('fb-status');if(e)e.innerHTML=fbBadge();});
@@ -509,6 +511,10 @@ function wGeralTier(att,key,val){SHARED.geralOv[att]=SHARED.geralOv[att]||{};SHA
  if(HAVE_FB)DB.ref('geral/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wTabTier(tab,att,key,val){const t=SHARED.tabs[tab];if(!t)return;t.ov[att]=t.ov[att]||{};t.ov[att][key]=val;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
+function wGeralEscVal(key,val){SHARED.geralEscVal[key]=val;
+ if(HAVE_FB)DB.ref('geral/escVal/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
+function wTabEscVal(tab,key,val){const t=SHARED.tabs[tab];if(!t)return;t.escVal=t.escVal||{};t.escVal[key]=val;
+ if(HAVE_FB)DB.ref('tabs/'+tab+'/escVal/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wDelScope(tab,key){const t=SHARED.tabs[tab];if(!t)return;t.delS[key]=true;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delS/'+encK(key)).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
 function wDelAtt(tab,att){const t=SHARED.tabs[tab];if(!t)return;t.delA[att]=true;
@@ -519,8 +525,8 @@ function wAddAtt(tab,obj){const t=SHARED.tabs[tab];if(!t)return;let id;
  if(HAVE_FB){const r=DB.ref('tabs/'+tab+'/addA').push();id=r.key;t.addA.push(Object.assign({id:id,share:0,comp:{}},obj));r.set(obj).catch(fbErr);}
  else{id='att'+Date.now();t.addA.push(Object.assign({id:id,share:0,comp:{}},obj));persistSharedLocal();}renderActive();}
 function wAddTab(obj,cb){let id;
- if(HAVE_FB){const r=DB.ref('tabs').push();id=r.key;SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},delS:{},delA:{},addS:[],addA:[]};r.set(obj).catch(fbErr);}
- else{id='c'+Date.now();SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},delS:{},delA:{},addS:[],addA:[]};persistSharedLocal();}cb(id);}
+ if(HAVE_FB){const r=DB.ref('tabs').push();id=r.key;SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},delS:{},delA:{},addS:[],addA:[]};r.set(obj).catch(fbErr);}
+ else{id='c'+Date.now();SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},delS:{},delA:{},addS:[],addA:[]};persistSharedLocal();}cb(id);}
 function wDelTab(id){delete SHARED.tabs[id];if(HAVE_FB)DB.ref('tabs/'+id).remove().catch(fbErr);else persistSharedLocal();renderActive();}
 function wRenameTab(id,name){if(SHARED.tabs[id])SHARED.tabs[id].name=name;if(HAVE_FB)DB.ref('tabs/'+id+'/name').set(name).catch(fbErr);else persistSharedLocal();renderActive();}
 function wMonth(att,val){if(val)SHARED.plano.months[att]=val;else delete SHARED.plano.months[att];if(HAVE_FB)DB.ref('plano/months/'+att).set(val||null).catch(fbErr);else persistSharedLocal();}
@@ -561,11 +567,17 @@ function cycleTier(id,att,key){const cur=curTier(id,att,key);const order=[null,'
 // nenhum dado novo — os valores originais gravados continuam nos mesmos locais).
 function escDisplayTier(t){return t==='Completo'?'Avançado':t;}
 const ESC_TIERS=['Essencial','Avançado']; // usado apenas no resumo da aba "Análise de escopos" — sem "Completo"
-function escValidation(id,key,atts){if(!atts||!atts.length)return null;return escDisplayTier(curTier(id,atts[0].id,key));}
-function cycleEscVal(id,key,atts){const cur=escValidation(id,key,atts);const order=[null,'Essencial','Avançado'];const nxt=order[(order.indexOf(cur)+1)%3];const val=nxt===null?'NA':nxt;
- atts.forEach(a=>{if(id==='geral')wGeralTier(a.id,key,val);else wTabTier(id,a.id,key,val);});
- if(id!=='geral')refreshSummaryInline(id);
- renderEscopos();}
+// curEscVal/cycleEscVal: campo de Validação é INDEPENDENTE dos dados de aplicabilidade
+// por setor (curTier/hospHas). Nunca escreve em geralOv/tabs[].ov — assim os ✔/✘ de
+// cada setor continuam refletindo somente os dados originais do hospital.
+function curEscVal(id,key){
+ if(id==='geral')return SHARED.geralEscVal[key]||null;
+ const c=SHARED.tabs[id];const v=c&&c.escVal&&c.escVal[key];if(v!=null)return v==='NA'?null:v;return curEscVal('geral',key);}
+function cycleEscVal(id,key){const cur=curEscVal(id,key);const order=[null,'Essencial','Avançado'];const nxt=order[(order.indexOf(cur)+1)%3];const val=nxt===null?'NA':nxt;
+ if(id==='geral')wGeralEscVal(key,val);else wTabEscVal(id,key,val);
+ const chip=document.querySelector('#mxwrap .tchip[data-esckey="'+CSS.escape(key)+'"]');
+ if(chip){const eff=val==='NA'?null:val;chip.className='tchip '+tierCls(eff);chip.textContent=tierAbbr(eff);chip.title=eff||'não aplicável';}
+ if(id!=='geral')refreshSummaryInline(id);}
 
 function renderSubtabs(){const bar=document.getElementById('subtabs');let h='';
  h+=`<div class="subtab ${UI.active==='geral'?'active':''}" data-id="geral">Geral</div>`;
@@ -582,7 +594,9 @@ function openClientModal(){const opts=DATA.clients.map(c=>`<option value="${esc(
  const setN=()=>{const c=DATA.clients.find(x=>x.hosp===sel.value);nm.value=c?c.label:sel.value;};setN();sel.onchange=setN;
  document.getElementById('m-ok').onclick=()=>{wAddTab({client:sel.value,name:nm.value||sel.value},id=>{UI.active=id;saveUI();closeModal();renderEscopos();});};}
 
-function renderEscopos(){renderSubtabs();
+function renderEscopos(){
+ const _wx=window.scrollX,_wy=window.scrollY;
+ renderSubtabs();
  const id=UI.active;const isGeral=id==='geral';const c=SHARED.tabs[id];
  if(!isGeral&&!c){UI.active='geral';saveUI();return renderEscopos();}
  const client=isGeral?null:c.client;const atts=viewAtts(id);const groups=viewScopes(id);const cont=document.getElementById('escopos-view');
@@ -601,13 +615,15 @@ function renderEscopos(){renderSubtabs();
    const op=s.op?`<span class="oplabel">${esc(s.op)}</span>`:'';
    const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
    h+=`<tr><th class="rowh">${mark}${esc(s.escopo)}${op}${del}</th>`;
-   const vt=escValidation(id,s.key,atts);
-   h+=`<td class="valcol"><span class="tchip" data-esckey="${esc(s.key)}" title="${vt||'não aplicável'}">${tierAbbr(vt)}</span></td>`;
+   const vt=curEscVal(id,s.key);
+   h+=`<td class="valcol"><span class="tchip ${tierCls(vt)}" data-esckey="${esc(s.key)}" title="${vt||'não aplicável'}">${tierAbbr(vt)}</span></td>`;
    atts.forEach(a=>{const t=curTier(id,a.id,s.key);const has=t!=null;
     h+=`<td class="chkcol">${has?`<span class="chk-ok" title="${esc(escDisplayTier(t))}">✔</span>`:'<span class="chk-no">✘</span>'}</td>`;});
    h+='</tr>';});});
- h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}});
- cont.querySelectorAll('.tchip[data-esckey]').forEach(el=>{const cls=tierCls(escValidation(id,el.dataset.esckey,atts));el.className='tchip '+cls;el.onclick=()=>cycleEscVal(id,el.dataset.esckey,atts);});
+ h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
+ window.scrollTo(_wx,_wy);
+ if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}window.scrollTo(_wx,_wy);});
+ cont.querySelectorAll('.tchip[data-esckey]').forEach(el=>el.onclick=()=>cycleEscVal(id,el.dataset.esckey));
  if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
   cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=()=>wDelScope(id,el.dataset.dels));
   cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=()=>wDelAtt(id,el.dataset.dela));attachSummaryHandlers(id);}}
