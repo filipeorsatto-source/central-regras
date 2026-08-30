@@ -157,15 +157,21 @@ header{position:relative}
 /* ==== Drill-down de regras + edição ==== */
 .drill{display:inline-block;color:#6b7a99;cursor:pointer;font-weight:800;font-size:11px;margin-right:6px;transition:transform .15s;transform:rotate(0deg)}
 .drill:hover{color:var(--accent)}.drill.open{transform:rotate(90deg);color:var(--accent2)}
-tr.rd-row>td{background:#0b111d;padding:0;border-bottom:1px solid var(--line)}
-.rd-box{padding:12px 16px}
-.rd-title{font-size:13px;color:var(--txt);margin-bottom:8px}
-table.rd-tbl{width:100%;border-collapse:collapse;font-size:12px}
-table.rd-tbl th{text-align:left;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
-table.rd-tbl td{padding:5px 8px;border-bottom:1px solid #1a2436;vertical-align:top}
-table.rd-tbl tr:last-child td{border-bottom:none}
-.rule-scope-sel{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:12px;max-width:300px}
-.rule-scope-sel:hover{border-color:var(--accent)}
+tr.rd-row>td{background:#0b111d;padding:0;border-bottom:1px solid var(--line);position:relative}
+.rd-box{position:sticky;left:0;width:340px;max-width:340px;padding:10px 12px;box-sizing:border-box}
+.rd-title{font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:8px}
+.rd-empty{font-size:12px;color:var(--muted);line-height:1.4}
+ul.rd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}
+ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--panel2)}
+.rd-line{display:flex;align-items:center;gap:8px}
+.rd-line .code{font-family:Consolas,monospace;color:var(--accent2);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rd-desc{font-size:12px;color:var(--txt);margin-top:3px;line-height:1.35}
+.rd-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.rule-edit{cursor:pointer;color:#6b7a99;font-size:13px;flex:none;padding:0 2px}
+.rule-edit:hover{color:var(--accent)}
+.rule-edit.moved{color:var(--accent2)}
+.rededit-cell{text-align:center;width:28px}
+.rule-scope-sel{background:var(--panel2);color:var(--txt);border:1px solid var(--accent);border-radius:7px;padding:4px 6px;font-size:12px;max-width:280px}
 .att-share[data-share-att]{cursor:pointer}
 .att-share[data-share-att]:hover{outline:1px solid var(--accent)}
 </style></head><body>
@@ -300,12 +306,13 @@ function buildBaseCov(){const e=document.getElementById('basecov');if(!e)return;
   +DATA.meta.grandGen.toLocaleString('pt-BR')+' alertas \u00b7 '+money(DATA.meta.grandValor)+' apontados'+dia;}
 
 // ---- shared tree builder (central + operadoras) ----
-function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);
+function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];
  return `<tr><td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td>
   <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span></td>
   <td class="num">${pct(r.valor/GV,2)}</td>
   <td class="num" style="color:${c};font-weight:700">${e==null?'—':pct(e)}</td>
-  <td class="num muted">${r.gen.toLocaleString('pt-BR')}</td></tr>`;}
+  <td class="num muted">${r.gen.toLocaleString('pt-BR')}</td>
+  <td class="rededit-cell"><span class="rule-edit${moved?' moved':''}" data-rid="${esc(r._rid)}" data-curkey="${esc(ek).replace(/"/g,'&quot;')}" title="${moved?'Escopo reatribuído manualmente — clique para alterar':'Reatribuir escopo'}">✎</span></td></tr>`;}
 function buildTree(container,tree,q,hf){
  container.innerHTML='';let shownCat=0,shownRules=0;
  DATA.cat_order.forEach(cat=>{if(!tree[cat])return;const scopes=tree[cat];
@@ -317,7 +324,7 @@ function buildTree(container,tree,q,hf){
    const a=agg(rules);const sc=el('div','scope');
    sc.innerHTML=`<div class="head"><span class="arrow">▶</span><span class="sname">${esc(scName)}</span>
      <span class="badges"><span class="count">${rules.length} regras</span>${wpill(a.weight)}${epill(a.gen,a.res)}</span></div>
-     <div class="rules"><table class="rules-tbl"><thead><tr><th>Código</th><th>Descrição</th><th>Hospital</th><th class="num">Peso</th><th class="num">Efet.</th><th class="num">Alertas</th></tr></thead>
+     <div class="rules"><table class="rules-tbl"><thead><tr><th>Código</th><th>Descrição</th><th>Hospital</th><th class="num">Peso</th><th class="num">Efet.</th><th class="num">Alertas</th><th></th></tr></thead>
      <tbody>${rules.map(ruleRow).join('')}</tbody></table></div>`;
    sc.querySelector('.head').onclick=()=>sc.classList.toggle('open');scopeEls.push(sc);});
   if(!catRules.length)return;shownCat++;shownRules+=catRules.length;
@@ -329,7 +336,8 @@ function buildTree(container,tree,q,hf){
   if(q){c.classList.add('open');scopeEls.forEach(s=>s.classList.add('open'));}
   container.appendChild(c);});
  if(!shownCat)container.innerHTML='<div class="empty">Nenhuma regra encontrada.</div>';
- document.getElementById('central-hint').textContent=`${shownRules} regras · ${shownCat} categorias`;}
+ container.querySelectorAll('.rule-edit[data-rid]').forEach(p=>p.onclick=e=>{e.stopPropagation();openScopeEditor(p.dataset.rid,p,p.dataset.curkey,globalScopeOptionsHtml(p.dataset.curkey));});
+ const ch=document.getElementById('central-hint');if(ch&&container.id==='tree')ch.textContent=`${shownRules} regras · ${shownCat} categorias`;}
 const fhosp=document.getElementById('fhosp');
 function refreshCentral(){buildTree(document.getElementById('tree'),DATA.general,document.getElementById('search').value.trim().toLowerCase(),fhosp.value);}
 document.getElementById('search').oninput=refreshCentral;fhosp.onchange=refreshCentral;
@@ -399,7 +407,7 @@ document.querySelectorAll('#coveff button').forEach(b=>b.onclick=()=>{document.q
 
 // ---- volume ----
 let VOLM='qtd';
-function catHospRules(cat,h){return DATA.rules.filter(r=>r.cat===cat&&r.hosp===h);}
+function catHospRules(cat,h){return DATA.rules.filter(r=>(r._ecat||r.cat)===cat&&r.hosp===h);}
 function buildVol(){const C=DATA.counts,H=DATA.hosps,t=document.getElementById('voltable');
  let head='<thead><tr><th class="cat-name">Categoria</th>'+H.map(h=>`<th>${esc(h)}</th>`).join('')+'<th>Total</th></tr></thead>';
  let body='<tbody>';const colG={},colR={},colN={};H.forEach(h=>{colG[h]=0;colR[h]=0;colN[h]=0;});
@@ -414,7 +422,7 @@ function buildVol(){const C=DATA.counts,H=DATA.hosps,t=document.getElementById('
     body+=`<td><div class="cell volcell" ${nums[i]>0?`data-cat="${esc(cat)}" data-h="${esc(h)}"`:''} style="background:${bg};cursor:${nums[i]>0?'pointer':'default'}"><span style="color:${col};font-weight:700">${e==null?'—':pct(e)}</span>${e!=null?`<div class="cov-bar"><i style="width:${Math.round(e*100)}%;background:${col}"></i></div>`:''}</div></td>`;}
   });
   if(VOLM==='qtd')body+=`<td><span class="pill" style="font-weight:700">${rowTot}</span></td></tr>`;
-  else{const rr=catHospRules(cat,null);const rules=DATA.rules.filter(x=>x.cat===cat);const g=rules.reduce((a,x)=>a+x.gen,0),r=rules.reduce((a,x)=>a+x.res,0);const e=effVal(g,r);body+=`<td><span class="pill" style="font-weight:700;color:${effColor(e)}">${e==null?'—':pct(e)}</span></td></tr>`;}
+  else{const rules=DATA.rules.filter(x=>(x._ecat||x.cat)===cat);const g=rules.reduce((a,x)=>a+x.gen,0),r=rules.reduce((a,x)=>a+x.res,0);const e=effVal(g,r);body+=`<td><span class="pill" style="font-weight:700;color:${effColor(e)}">${e==null?'—':pct(e)}</span></td></tr>`;}
  });
  body+=`<tr style="background:var(--panel2)"><td class="cat-name" style="font-weight:800">${VOLM==='qtd'?'Total':'Efetividade'}</td>`;
  H.forEach(h=>{if(VOLM==='qtd')body+=`<td><div class="cell"><span style="font-weight:800;color:var(--accent2)">${colN[h]}</span></div></td>`;
@@ -424,36 +432,40 @@ function buildVol(){const C=DATA.counts,H=DATA.hosps,t=document.getElementById('
  t.innerHTML=head+body;
  t.querySelectorAll('.volcell[data-cat]').forEach(c=>c.onclick=()=>showVolRules(c.dataset.cat,c.dataset.h));}
 function effBg(e){return e>=0.35?'#16281c':e>=0.15?'#2e2610':'#3a1620';}
-function showVolRules(cat,h){const rows=DATA.rules.filter(r=>r.cat===cat&&r.hosp===h).sort((a,b)=>(effVal(b.gen,b.res)??-1)-(effVal(a.gen,a.res)??-1));
+function showVolRules(cat,h){const rows=DATA.rules.filter(r=>(r._ecat||r.cat)===cat&&r.hosp===h).sort((a,b)=>(effVal(b.gen,b.res)??-1)-(effVal(a.gen,a.res)??-1));
  const a=agg(rows);const p=document.getElementById('volrules');
  let html=`<h3>${esc(h)} — ${esc(cat)} <span class="pill">${rows.length} regras</span> ${wpill(a.weight)} ${epill(a.gen,a.res)}</h3>`;
- html+='<table class="rules-tbl" style="margin-top:10px"><thead><tr><th>Código</th><th>Descrição</th><th>Escopo</th><th>Operadora</th><th class="num">Peso</th><th class="num">Efet.</th><th class="num">Alertas</th></tr></thead><tbody>';
- html+=rows.map(r=>{const e=effVal(r.gen,r.res);return `<tr><td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td><td><span class="hosp-badge">${esc(r.escopo)}</span></td><td>${r.op?`<span class="miss-chip" style="margin:0">${esc(r.op)}</span>`:'<span class="muted">—</span>'}</td><td class="num">${pct(r.valor/GV,2)}</td><td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td><td class="num muted">${r.gen.toLocaleString('pt-BR')}</td></tr>`;}).join('');
- html+='</tbody></table>';p.innerHTML=html;p.classList.add('show');p.scrollIntoView({behavior:'smooth',block:'nearest'});}
+ html+='<table class="rules-tbl" style="margin-top:10px"><thead><tr><th>Código</th><th>Descrição</th><th>Escopo</th><th>Operadora</th><th class="num">Peso</th><th class="num">Efet.</th><th class="num">Alertas</th><th></th></tr></thead><tbody>';
+ html+=rows.map(r=>{const e=effVal(r.gen,r.res);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];return `<tr><td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td><td><span class="hosp-badge">${esc(r._eesc||r.escopo)}</span></td><td>${r.op?`<span class="miss-chip" style="margin:0">${esc(r.op)}</span>`:'<span class="muted">—</span>'}</td><td class="num">${pct(r.valor/GV,2)}</td><td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td><td class="num muted">${r.gen.toLocaleString('pt-BR')}</td><td class="rededit-cell"><span class="rule-edit${moved?' moved':''}" data-rid="${esc(r._rid)}" data-curkey="${esc(ek).replace(/"/g,'&quot;')}" title="Reatribuir escopo">✎</span></td></tr>`;}).join('');
+ html+='</tbody></table>';p.innerHTML=html;p.classList.add('show');
+ p.querySelectorAll('.rule-edit[data-rid]').forEach(pe=>pe.onclick=e=>{e.stopPropagation();openScopeEditor(pe.dataset.rid,pe,pe.dataset.curkey,globalScopeOptionsHtml(pe.dataset.curkey));});
+ p.scrollIntoView({behavior:'smooth',block:'nearest'});}
 document.querySelectorAll('#volmode button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#volmode button').forEach(x=>x.classList.remove('active'));b.classList.add('active');VOLM=b.dataset.m;document.getElementById('volrules').classList.remove('show');buildVol();});
 
 // ---- todas as regras ----
 const tf={hosp:'',cat:'',alert:'',q:''};let tsort={key:'eff',dir:-1};
 const tfcat=document.getElementById('tfcat');
 const tfh=document.getElementById('tfhosp');
-const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['valor','Peso']];
-function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;if(k==='valor')return r.valor;return r[k];}
+const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['valor','Peso'],['edit','']];
+function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;if(k==='valor')return r.valor;if(k==='cat')return r._ecat||r.cat;if(k==='escopo')return r._eesc||r.escopo;return r[k];}
 function buildTodas(){
- let rows=DATA.rules.filter(r=>{if(tf.hosp&&r.hosp!==tf.hosp)return false;if(tf.cat&&r.cat!==tf.cat)return false;
+ let rows=DATA.rules.filter(r=>{if(tf.hosp&&r.hosp!==tf.hosp)return false;if(tf.cat&&(r._ecat||r.cat)!==tf.cat)return false;
   if(tf.alert==='1'&&r.gen<=0)return false;
-  if(tf.q){const t=(r.cod+' '+r.desc+' '+r.cat+' '+r.escopo+' '+r.op).toLowerCase();if(!t.includes(tf.q))return false;}return true;});
+  if(tf.q){const t=(r.cod+' '+r.desc+' '+(r._ecat||r.cat)+' '+(r._eesc||r.escopo)+' '+r.op).toLowerCase();if(!t.includes(tf.q))return false;}return true;});
  rows.sort((a,b)=>{const x=rVal(a,tsort.key),y=rVal(b,tsort.key);if(x<y)return -tsort.dir;if(x>y)return tsort.dir;return 0;});
  const t=document.getElementById('bigtable');
  let head='<thead><tr>'+TCOLS.map(([k,l])=>`<th data-k="${k}">${l}${tsort.key===k?` <span class="sarr">${tsort.dir>0?'▲':'▼'}</span>`:''}</th>`).join('')+'</tr></thead>';
- let body='<tbody>'+rows.slice(0,1500).map(r=>{const e=effVal(r.gen,r.res);return `<tr>
+ let body='<tbody>'+rows.slice(0,1500).map(r=>{const e=effVal(r.gen,r.res);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];return `<tr>
    <td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td>
    <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span></td>
-   <td>${esc(r.cat)}</td><td class="muted">${esc(r.escopo)}</td><td>${r.op?esc(r.op):'<span class="muted">—</span>'}</td>
+   <td>${esc(r._ecat||r.cat)}</td><td class="muted">${esc(r._eesc||r.escopo)}</td><td>${r.op?esc(r.op):'<span class="muted">—</span>'}</td>
    <td class="num">${r.gen.toLocaleString('pt-BR')}</td><td class="num">${r.res.toLocaleString('pt-BR')}</td>
    <td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td>
-   <td class="num">${pct(r.valor/GV,2)}</td></tr>`;}).join('')+'</tbody>';
+   <td class="num">${pct(r.valor/GV,2)}</td>
+   <td class="rededit-cell"><span class="rule-edit${moved?' moved':''}" data-rid="${esc(r._rid)}" data-curkey="${esc(ek).replace(/"/g,'&quot;')}" title="${moved?'Escopo reatribuído — clique para alterar':'Reatribuir escopo'}">✎</span></td></tr>`;}).join('')+'</tbody>';
  t.innerHTML=head+body;
- t.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(tsort.key===k)tsort.dir*=-1;else{tsort.key=k;tsort.dir=(k==='cod'||k==='desc'||k==='cat'||k==='escopo'||k==='hosp'||k==='op')?1:-1;}buildTodas();});
+ t.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(k==='edit')return;if(tsort.key===k)tsort.dir*=-1;else{tsort.key=k;tsort.dir=(k==='cod'||k==='desc'||k==='cat'||k==='escopo'||k==='hosp'||k==='op')?1:-1;}buildTodas();});
+ t.querySelectorAll('.rule-edit[data-rid]').forEach(pe=>pe.onclick=e=>{e.stopPropagation();openScopeEditor(pe.dataset.rid,pe,pe.dataset.curkey,globalScopeOptionsHtml(pe.dataset.curkey));});
  document.getElementById('todas-hint').textContent=`${rows.length} regras${rows.length>1500?' (exibindo 1500)':''}`;}
 document.getElementById('tsearch').oninput=e=>{tf.q=e.target.value.trim().toLowerCase();buildTodas();};
 tfh.onchange=e=>{tf.hosp=e.target.value;buildTodas();};tfcat.onchange=e=>{tf.cat=e.target.value;buildTodas();};
@@ -484,7 +496,7 @@ function monthOptions(){
  const ini=MES_ABREV.indexOf(MONTHS[0]);
  antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
  return antes.concat(set);}
-function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},tabs:{},plano:{monthsH:{}}};}
+function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},ruleMap:{},tabs:{},plano:{monthsH:{}}};}
 let SHARED=emptyShared();
 function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true}};
  try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)Object.assign(d,s);}catch(e){}
@@ -527,6 +539,7 @@ function startSync(){
   DB.ref('geral/attShare').on('value',s=>{SHARED.attShare=s.val()||{};renderActive();},fbReadErr);
   DB.ref('tabs').on('value',s=>{SHARED.tabs=decodeTabs(s.val());renderActive();},fbReadErr);
   DB.ref('plano/monthsH').on('value',s=>{SHARED.plano.monthsH=decodeFlat(s.val());renderActive();},fbReadErr);
+  DB.ref('geral/ruleMap').on('value',s=>{SHARED.ruleMap=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('.info/connected').on('value',s=>{CONN=!!s.val();const e=document.getElementById('fb-status');if(e)e.innerHTML=fbBadge();});
  }else{loadSharedLocal();}
 }
@@ -542,14 +555,17 @@ function wTabEscVal(tab,key,val){const t=SHARED.tabs[tab];if(!t)return;t.escVal=
  if(HAVE_FB)DB.ref('tabs/'+tab+'/escVal/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wAttShare(attId,val){SHARED.attShare[attId]=val;
  if(HAVE_FB)DB.ref('geral/attShare/'+attId).set(val).catch(fbErr);else persistSharedLocal();}
-function wRuleMap(tab,rid,scopeKey){const t=SHARED.tabs[tab];if(!t)return;t.ruleMap=t.ruleMap||{};
- if(scopeKey)t.ruleMap[rid]=scopeKey;else delete t.ruleMap[rid];
- delete AGGCACHE[t.client];
- if(HAVE_FB)DB.ref('tabs/'+tab+'/ruleMap/'+encK(rid)).set(scopeKey||null).catch(fbErr);else persistSharedLocal();}
+// reatribuição de regra → escopo, GLOBAL (afeta todas as visões). rid = hosp||cod
+function wRuleMapGlobal(rid,scopeKey){SHARED.ruleMap=SHARED.ruleMap||{};
+ const r=RULEBYID[rid];const base=r?(r.cat+'||'+r.escopo):null;const store=(scopeKey&&scopeKey!==base)?scopeKey:null;
+ if(store)SHARED.ruleMap[rid]=store;else delete SHARED.ruleMap[rid];
+ rebuildDerived();
+ if(HAVE_FB)DB.ref('geral/ruleMap/'+encK(rid)).set(store).catch(fbErr);else persistSharedLocal();
+ rerenderVisible();}
 function wDelScope(tab,key){const t=SHARED.tabs[tab];if(!t)return;t.delS[key]=true;
- // limpa reatribuições de regras que apontavam para este escopo (revertem ao escopo base)
- if(t.ruleMap){Object.keys(t.ruleMap).forEach(rid=>{if(t.ruleMap[rid]===key){delete t.ruleMap[rid];if(HAVE_FB)DB.ref('tabs/'+tab+'/ruleMap/'+encK(rid)).set(null).catch(fbErr);}});}
- delete AGGCACHE[t.client];
+ // limpa reatribuições GLOBAIS de regras que apontavam para este escopo (revertem ao escopo base)
+ if(SHARED.ruleMap)Object.keys(SHARED.ruleMap).forEach(rid=>{if(SHARED.ruleMap[rid]===key){delete SHARED.ruleMap[rid];if(HAVE_FB)DB.ref('geral/ruleMap/'+encK(rid)).set(null).catch(fbErr);}});
+ rebuildDerived();
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delS/'+encK(key)).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
 function wDelAtt(tab,att){const t=SHARED.tabs[tab];if(!t)return;t.delA[att]=true;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delA/'+att).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
@@ -568,19 +584,59 @@ function wMonthH(attId,hosp,val){const k=attId+'@@'+hosp;if(val)SHARED.plano.mon
  if(HAVE_FB)DB.ref('plano/monthsH/'+encK(k)).set(val||null).catch(fbErr);else persistSharedLocal();}
 function tabsOrder(){return Object.keys(SHARED.tabs).sort();}
 
-// ---- índice de regras (para drill-down e cobertura dinâmica) ----
-let RULES_BY_HOSP={};
-function buildRuleIdx(){RULES_BY_HOSP={};DATA.rules.forEach(r=>{r._rid=r.hosp+'||'+r.cod;(RULES_BY_HOSP[r.hosp]=RULES_BY_HOSP[r.hosp]||[]).push(r);});}
+// ---- índice de regras (drill-down, cobertura dinâmica e reatribuição global) ----
+let RULES_BY_HOSP={},RULEBYID={};
+function buildRuleIdx(){RULES_BY_HOSP={};RULEBYID={};DATA.rules.forEach(r=>{r._rid=r.hosp+'||'+r.cod;RULEBYID[r._rid]=r;(RULES_BY_HOSP[r.hosp]=RULES_BY_HOSP[r.hosp]||[]).push(r);});}
 function hospTabId(H){return tabsOrder().find(id=>SHARED.tabs[id].client===H)||null;}
 let AGGCACHE={};
-// bucket de regras por escopo para um hospital, aplicando o ruleMap da aba do hospital
+// escopo efetivo de uma regra (aplica override global de ruleMap)
+function effKeyR(r){return (SHARED.ruleMap&&SHARED.ruleMap[r._rid])||(r.cat+'||'+r.escopo);}
+function effCatEsc(r){const k=effKeyR(r);const p=String(k).split('||');
+ if(p.length>=4&&p[0]==='custom')return{cat:p[1]||'—',escopo:p[2]||k,op:p[3]||'',key:k};
+ return{cat:p[0]||'—',escopo:p.slice(1).join('||')||k,op:'',key:k};}
+// bucket de regras por escopo efetivo para um hospital
 function hospAgg(H){if(AGGCACHE[H])return AGGCACHE[H];
- const tabId=hospTabId(H);const map=(tabId&&SHARED.tabs[tabId].ruleMap)||{};
  const rules=RULES_BY_HOSP[H]||[];const agg={};
- rules.forEach(r=>{const k=map[r._rid]||(r.cat+'||'+r.escopo);const a=agg[k]||(agg[k]={gen:0,res:0,rules:[]});a.gen+=r.gen;a.res+=r.res;a.rules.push(r);});
+ rules.forEach(r=>{const k=effKeyR(r);const a=agg[k]||(agg[k]={gen:0,res:0,rules:[]});a.gen+=r.gen;a.res+=r.res;a.rules.push(r);});
  return AGGCACHE[H]=agg;}
 function hospHasScope(H,key){const a=hospAgg(H)[key];return !!(a&&a.rules.length);}
 function hospScopeStat(H,key){const a=hospAgg(H)[key];return a?{gen:a.gen,res:a.res}:{gen:0,res:0};}
+// recalcula TODAS as estruturas derivadas (Central, Operadoras, Cobertura, Volume) a partir de DATA.rules + ruleMap
+function rebuildDerived(){
+ const gen={},ops={},counts={},cov={};
+ DATA.rules.forEach(r=>{const e=effCatEsc(r);r._ecat=e.cat;r._eesc=e.escopo;r._ekey=e.key;const cat=e.cat,s=e.escopo,op=r.op,h=r.hosp;
+  (counts[cat]=counts[cat]||{});counts[cat][h]=(counts[cat][h]||0)+1;
+  const tree=op?(ops[op]=ops[op]||{}):gen;const co=tree[cat]=tree[cat]||{};(co[s]=co[s]||[]).push(r);
+  const cc=cov[cat]=cov[cat]||{sc:{},w:{},hosp:{}};cc.sc[s]=true;cc.w[s]=(cc.w[s]||0)+(r.valor||0);
+  const hh=cc.hosp[h]=cc.hosp[h]||{};const st=hh[s]=hh[s]||{gen:0,res:0,n:0};st.gen+=r.gen;st.res+=r.res;st.n++;});
+ const categories=[];
+ const cats=DATA.cat_order.filter(c=>cov[c]).concat(Object.keys(cov).filter(c=>!DATA.cat_order.includes(c)));
+ cats.forEach(cat=>{const cc=cov[cat];const scopes=Object.keys(cc.sc).sort();const scopeWeight={};scopes.forEach(s=>scopeWeight[s]=cc.w[s]||0);
+  const hosp={};DATA.hosps.forEach(h=>{const src=cc.hosp[h]||{};const counts2={},stats={},missing=[];let covered=0;
+   scopes.forEach(s=>{const st=src[s];if(st&&st.n>0){counts2[s]=st.n;stats[s]={gen:st.gen,res:st.res};covered++;}else{stats[s]={gen:0,res:0};missing.push(s);}});
+   hosp[h]={covered,missing,counts:counts2,stats};});
+  categories.push({cat,scopes,total_scopes:scopes.length,scopeWeight,hosp});});
+ DATA.cat_order.forEach(c=>{counts[c]=counts[c]||{};DATA.hosps.forEach(h=>{if(counts[c][h]==null)counts[c][h]=0;});});
+ DATA.general=gen;DATA.operators=ops;DATA.counts=counts;DATA.coverage={categories};AGGCACHE={};}
+// re-renderiza a aba visível após uma edição de escopo
+function rerenderVisible(){const vis=id=>{const e=document.getElementById('tab-'+id);return e&&e.style.display!=='none';};
+ if(vis('central'))refreshCentral();if(vis('operadoras'))refreshOps();if(vis('cobertura'))refreshCov();
+ if(vis('volume'))buildVol();if(vis('todas'))buildTodas();if(vis('escopos'))renderEscopos();if(vis('plano'))renderPlano();}
+// opções de escopo (catálogo global) para o seletor de reatribuição
+function globalScopeOptionsHtml(curKey){const byCat={};DATA.scopeCatalog.forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
+ const cats=DATA.cat_order.filter(c=>byCat[c]).concat(Object.keys(byCat).filter(c=>!DATA.cat_order.includes(c)));
+ let h='',has=false;
+ cats.forEach(cat=>{h+='<optgroup label="'+esc(cat)+'">';byCat[cat].slice().sort((a,b)=>a.escopo.localeCompare(b.escopo)).forEach(s=>{if(s.key===curKey)has=true;h+='<option value="'+esc(s.key).replace(/"/g,'&quot;')+'"'+(s.key===curKey?' selected':'')+'>'+esc(s.escopo)+'</option>';});h+='</optgroup>';});
+ if(!has&&curKey){const info=scopeInfo(curKey);h='<optgroup label="'+esc(info.cat)+' (atual)"><option value="'+esc(curKey).replace(/"/g,'&quot;')+'" selected>'+esc(info.escopo)+'</option></optgroup>'+h;}
+ return h;}
+// editor inline: troca o lápis por uma lista suspensa; grava no change, cancela no blur/Esc
+function openScopeEditor(rid,anchor,curKey,optsHtml){
+ const sel=document.createElement('select');sel.className='rule-scope-sel';sel.innerHTML=optsHtml;
+ [...sel.options].forEach(o=>{o.selected=(o.value===curKey);});
+ anchor.replaceWith(sel);sel.focus();let done=false;
+ sel.onchange=()=>{done=true;if(sel.value!==curKey)wRuleMapGlobal(rid,sel.value);else rerenderVisible();};
+ sel.onkeydown=e=>{if(e.key==='Escape'){done=true;rerenderVisible();}};
+ sel.onblur=()=>{setTimeout(()=>{if(!done)rerenderVisible();},120);};}
 
 // ---- helpers de exibição ----
 function tierCls(t){return t==='Essencial'?'t-ess':t==='Avançado'?'t-adv':t==='Completo'?'t-comp':'t-na';}
@@ -702,27 +758,30 @@ function editShare(el){const attId=el.dataset.shareAtt;const cur=el.textContent.
  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){renderEscopos();}};
  inp.onblur=commit;}
 
-// drill-down: regras que compõem o escopo (na aba do cliente) + reatribuição
+// drill-down COMPACTO (ancorado à esquerda): regras que compõem o escopo no hospital + lápis p/ reatribuir
 function toggleDrill(id,key,caret){const client=SHARED.tabs[id].client;
  const row=document.querySelector('#mxwrap tr[data-scoperow="'+CSS.escape(key)+'"]');if(!row)return;
  const nxt=row.nextElementSibling;
  if(nxt&&nxt.classList.contains('rd-row')){nxt.remove();caret.classList.remove('open');return;}
+ // fecha qualquer outro drill aberto
+ document.querySelectorAll('#mxwrap tr.rd-row').forEach(r=>r.remove());
+ document.querySelectorAll('#mxwrap .drill.open').forEach(d=>d.classList.remove('open'));
  caret.classList.add('open');
  const agg=hospAgg(client)[key];const rules=(agg&&agg.rules)||[];
  const ncols=(viewAtts(id).length)+2;
- const optHtml=scopeOptionsHtml(id);
- let inner='<div class="rd-box"><div class="rd-title">Regras que compõem <b>'+esc(key.split('||').pop())+'</b> em '+esc(client)+' <span class="mono-sm">('+rules.length+')</span></div>';
- if(!rules.length)inner+='<div class="mono-sm" style="padding:6px 2px">Nenhuma regra associada. Reatribua regras de outros escopos para cá pelo seletor no drill-down do escopo de origem.</div>';
- else{inner+='<table class="rd-tbl"><thead><tr><th>Código</th><th>Descrição</th><th class="num">Alertas</th><th class="num">Efet.</th><th>Escopo (reatribuir)</th></tr></thead><tbody>';
-  rules.forEach(r=>{const e=effVal(r.gen,r.res);
-   inner+='<tr><td class="code">'+esc(r.cod)+'</td><td>'+esc(r.desc)+'</td><td class="num muted">'+r.gen.toLocaleString('pt-BR')+'</td><td class="num" style="color:'+effColor(e)+';font-weight:700">'+(e==null?'—':pct(e))+'</td>'
-    +'<td><select class="rule-scope-sel" data-rid="'+esc(r._rid)+'">'+optHtml.replace('value="'+esc(key).replace(/"/g,'&quot;')+'"','value="'+esc(key).replace(/"/g,'&quot;')+'" selected')+'</select></td></tr>';});
-  inner+='</tbody></table>';}
+ let inner='<div class="rd-box"><div class="rd-title">'+rules.length+' regra'+(rules.length===1?'':'s')+' · '+esc(client)+'</div>';
+ if(!rules.length)inner+='<div class="rd-empty">Nenhuma regra neste escopo aqui. Abra o escopo de origem e use o lápis (✎) para trazer regras para cá.</div>';
+ else{inner+='<ul class="rd-list">';
+  rules.forEach(r=>{const e=effVal(r.gen,r.res);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];
+   inner+='<li><div class="rd-line"><span class="code" title="'+esc(r.cod)+'">'+esc(r.cod)+'</span>'
+     +'<span class="rule-edit'+(moved?' moved':'')+'" data-rid="'+esc(r._rid)+'" data-curkey="'+esc(ek).replace(/"/g,'&quot;')+'" title="Reatribuir escopo">✎</span></div>'
+     +'<div class="rd-desc">'+esc(r.desc)+'</div>'
+     +'<div class="rd-meta">'+r.gen.toLocaleString('pt-BR')+' alertas · efet '+(e==null?'—':pct(e))+'</div></li>';});
+  inner+='</ul>';}
  inner+='</div>';
  const tr=document.createElement('tr');tr.className='rd-row';tr.innerHTML='<td colspan="'+ncols+'">'+inner+'</td>';
  row.after(tr);
- tr.querySelectorAll('.rule-scope-sel').forEach(sel=>sel.onchange=()=>{wRuleMap(id,sel.dataset.rid,sel.value);renderEscopos();});}
-function scopeOptionsHtml(id){let h='';viewScopes(id).forEach(([cat,scs])=>{h+='<optgroup label="'+esc(cat)+'">';scs.forEach(s=>{h+='<option value="'+esc(s.key).replace(/"/g,'&quot;')+'">'+esc(s.escopo)+(s.op?' · '+esc(s.op):'')+'</option>';});h+='</optgroup>';});return h;}
+ tr.querySelectorAll('.rule-edit[data-rid]').forEach(p=>p.onclick=e=>{e.stopPropagation();openScopeEditor(p.dataset.rid,p,p.dataset.curkey,globalScopeOptionsHtml(p.dataset.curkey));});}
 
 function refreshSummaryInline(id){if(id==='geral')return;const c=SHARED.tabs[id];if(!c)return;
  const box=document.getElementById('esc-summary');if(!box)return;
@@ -919,7 +978,7 @@ function bootData(){
  }).catch(e=>showFatal('Erro ao ler a base do Firebase: '+((e&&e.message)||e)));
 }
 function initApp(){
- GV=DATA.meta.grandValor;buildRuleIdx();buildMonths();buildScopeStats();buildStats();
+ GV=DATA.meta.grandValor;buildRuleIdx();rebuildDerived();buildMonths();buildScopeStats();buildStats();
  (function(){const sh=document.getElementById("subhead");if(sh){const n=(DATA.hosps||[]).length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
  (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
    if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
