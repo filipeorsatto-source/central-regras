@@ -154,6 +154,20 @@ header{position:relative}
 .mchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .plano-month{font-size:15px;font-weight:800;margin:20px 0 8px;color:var(--accent2)}
 .mono-sm{font-size:11px;color:var(--muted)}
+/* ==== Drill-down de regras + edição ==== */
+.drill{display:inline-block;color:#6b7a99;cursor:pointer;font-weight:800;font-size:11px;margin-right:6px;transition:transform .15s;transform:rotate(0deg)}
+.drill:hover{color:var(--accent)}.drill.open{transform:rotate(90deg);color:var(--accent2)}
+tr.rd-row>td{background:#0b111d;padding:0;border-bottom:1px solid var(--line)}
+.rd-box{padding:12px 16px}
+.rd-title{font-size:13px;color:var(--txt);margin-bottom:8px}
+table.rd-tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.rd-tbl th{text-align:left;color:var(--muted);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+table.rd-tbl td{padding:5px 8px;border-bottom:1px solid #1a2436;vertical-align:top}
+table.rd-tbl tr:last-child td{border-bottom:none}
+.rule-scope-sel{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:12px;max-width:300px}
+.rule-scope-sel:hover{border-color:var(--accent)}
+.att-share[data-share-att]{cursor:pointer}
+.att-share[data-share-att]:hover{outline:1px solid var(--accent)}
 </style></head><body>
 <div class="authgate" id="auth-gate">
  <div class="authcard">
@@ -447,7 +461,13 @@ document.getElementById('tfalert').onchange=e=>{tf.alert=e.target.value;buildTod
 
 
 // ======================= ESTADO EDITÁVEL (Firebase RTDB, tempo real) =======================
-const TIERS=['Essencial','Avançado','Completo'];
+// Modelo:
+//  - Validação (escVal): tier do ESCOPO (Essencial / Avançado / NA) — independente de atendimento.
+//  - Aplicabilidade (ov): por (atendimento, escopo) → 'Aplicável' / 'NA' (binário).
+//  - ruleMap (por aba): regra (hosp||cod) → escopo ao qual foi reatribuída manualmente.
+//  - attShare (global): override do % de faturamento por atendimento.
+//  - plano.monthsH: mês de rollout por (atendimento @@ hospital).
+const TIERS=['Essencial','Avançado'];
 let MONTHS=['Jul','Ago','Set','Out','Nov','Dez'];
 // rollout comeca no mes seguinte ao ultimo mes com dado na base
 function buildMonths(){
@@ -455,19 +475,22 @@ function buildMonths(){
  const i=ate?parseInt(ate.slice(-2),10):7;   // 1-12
  const out=[];for(let k=0;k<6;k++)out.push(MES_ABREV[(i+k)%12]);
  MONTHS=out;}
+function chosenMonths(){const s={};const mh=(SHARED.plano&&SHARED.plano.monthsH)||{};
+ Object.keys(mh).forEach(k=>{const v=mh[k];if(v)s[v]=1;});return Object.keys(s);}
 // mantem meses ja escolhidos no plano mesmo que fiquem fora da janela atual
 function monthOptions(){
- const set=MONTHS.slice();
- // meses ja escolhidos que ficaram fora da janela entram ANTES, na ordem do calendario
- const antes=[];
- Object.values((SHARED.plano&&SHARED.plano.months)||{}).forEach(m=>{
-  if(m&&set.indexOf(m)<0&&antes.indexOf(m)<0)antes.push(m);});
+ const set=MONTHS.slice();const antes=[];
+ chosenMonths().forEach(m=>{if(set.indexOf(m)<0&&antes.indexOf(m)<0)antes.push(m);});
  const ini=MES_ABREV.indexOf(MONTHS[0]);
  antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
  return antes.concat(set);}
-let SHARED={geralOv:{},geralEscVal:{},tabs:{},plano:{months:{}}};
-function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true,'Completo':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true,'Completo':true}};
- try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)return Object.assign(d,s);}catch(e){}return d;}
+function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},tabs:{},plano:{monthsH:{}}};}
+let SHARED=emptyShared();
+function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true}};
+ try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)Object.assign(d,s);}catch(e){}
+ // saneia filtros antigos que continham "Completo"
+ ['planoFilter','planoSumFilter'].forEach(k=>{d[k]=d[k]||{};delete d[k]['Completo'];['Essencial','Avançado'].forEach(t=>{if(d[k][t]==null)d[k][t]=true;});});
+ return d;}
 let UI=loadUI();
 function saveUI(){try{localStorage.setItem('rivio_ui_v1',JSON.stringify(UI));}catch(e){}}
 function encK(k){return encodeURIComponent(k).replace(/\./g,'%2E');}
@@ -480,11 +503,11 @@ let HAVE_FB=false,DB=null;
  if(!firebase.apps.length)firebase.initializeApp(cfg);
  DB=firebase.database();HAVE_FB=true;
 }catch(e){console.warn('Firebase init falhou',e);HAVE_FB=false;}})();
-function loadSharedLocal(){try{const s=JSON.parse(localStorage.getItem('rivio_shared_v1'));if(s)SHARED=Object.assign({geralOv:{},geralEscVal:{},tabs:{},plano:{months:{}}},s);}catch(e){}}
+function loadSharedLocal(){try{const s=JSON.parse(localStorage.getItem('rivio_shared_v1'));if(s)SHARED=Object.assign(emptyShared(),s);}catch(e){}}
 function persistSharedLocal(){try{localStorage.setItem('rivio_shared_v1',JSON.stringify(SHARED));}catch(e){}}
 function decodeOv(raw){const o={};if(raw)for(const att in raw){o[att]={};for(const ek in raw[att])o[att][decK(ek)]=raw[att][ek];}return o;}
 function decodeFlat(raw){const o={};if(raw)for(const ek in raw)o[decK(ek)]=raw[ek];return o;}
-function decodeTabs(raw){const o={};if(raw)for(const id in raw){const c=raw[id]||{};const t={client:c.client||'',name:c.name||c.client||id,ov:decodeOv(c.ov),escVal:decodeFlat(c.escVal),delS:{},delA:c.delA||{},addS:[],addA:[]};
+function decodeTabs(raw){const o={};if(raw)for(const id in raw){const c=raw[id]||{};const t={client:c.client||'',name:c.name||c.client||id,ov:decodeOv(c.ov),escVal:decodeFlat(c.escVal),ruleMap:decodeFlat(c.ruleMap),delS:{},delA:c.delA||{},addS:[],addA:[]};
  if(c.delS)for(const ek in c.delS)t.delS[decK(ek)]=true;
  if(c.addS)for(const pid in c.addS){const s=c.addS[pid];t.addS.push({key:s.key,cat:s.cat,escopo:s.escopo,op:s.op||''});}
  if(c.addA)for(const pid in c.addA){const a=c.addA[pid];t.addA.push({id:pid,name:a.name,group:a.group,share:0,comp:{}});}
@@ -492,6 +515,7 @@ function decodeTabs(raw){const o={};if(raw)for(const id in raw){const c=raw[id]|
 let CONN=false;
 function fbBadge(){if(!HAVE_FB)return '<span class="fbdot off"></span> Offline (local)';return CONN?'<span class="fbdot on"></span> Live':'<span class="fbdot off"></span> Conectando…';}
 function renderActive(){
+ AGGCACHE={};
  const te=document.getElementById('tab-escopos'),tp=document.getElementById('tab-plano');
  if(te&&te.style.display!=='none')renderEscopos();
  if(tp&&tp.style.display!=='none')renderPlano();}
@@ -500,84 +524,103 @@ function startSync(){
  if(HAVE_FB){
   DB.ref('geral/ov').on('value',s=>{SHARED.geralOv=decodeOv(s.val());renderActive();},fbReadErr);
   DB.ref('geral/escVal').on('value',s=>{SHARED.geralEscVal=decodeFlat(s.val());renderActive();},fbReadErr);
+  DB.ref('geral/attShare').on('value',s=>{SHARED.attShare=s.val()||{};renderActive();},fbReadErr);
   DB.ref('tabs').on('value',s=>{SHARED.tabs=decodeTabs(s.val());renderActive();},fbReadErr);
-  DB.ref('plano/months').on('value',s=>{SHARED.plano.months=s.val()||{};renderActive();},fbReadErr);
+  DB.ref('plano/monthsH').on('value',s=>{SHARED.plano.monthsH=decodeFlat(s.val());renderActive();},fbReadErr);
   DB.ref('.info/connected').on('value',s=>{CONN=!!s.val();const e=document.getElementById('fb-status');if(e)e.innerHTML=fbBadge();});
  }else{loadSharedLocal();}
 }
 // write helpers — atualização OTIMISTA local + Firebase (quando disponível)
 function fbErr(e){const el=document.getElementById('fb-status');if(el)el.innerHTML='<span class="fbdot off"></span> Sem permissão de escrita — ajuste as Regras do Firebase';console.warn('FB write:',(e&&e.message)||e);}
-function wGeralTier(att,key,val){SHARED.geralOv[att]=SHARED.geralOv[att]||{};SHARED.geralOv[att][key]=val;
+function wGeralAppl(att,key,val){SHARED.geralOv[att]=SHARED.geralOv[att]||{};SHARED.geralOv[att][key]=val;
  if(HAVE_FB)DB.ref('geral/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
-function wTabTier(tab,att,key,val){const t=SHARED.tabs[tab];if(!t)return;t.ov[att]=t.ov[att]||{};t.ov[att][key]=val;
+function wTabAppl(tab,att,key,val){const t=SHARED.tabs[tab];if(!t)return;t.ov[att]=t.ov[att]||{};t.ov[att][key]=val;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/ov/'+att+'/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wGeralEscVal(key,val){SHARED.geralEscVal[key]=val;
  if(HAVE_FB)DB.ref('geral/escVal/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
 function wTabEscVal(tab,key,val){const t=SHARED.tabs[tab];if(!t)return;t.escVal=t.escVal||{};t.escVal[key]=val;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/escVal/'+encK(key)).set(val).catch(fbErr);else persistSharedLocal();}
+function wAttShare(attId,val){SHARED.attShare[attId]=val;
+ if(HAVE_FB)DB.ref('geral/attShare/'+attId).set(val).catch(fbErr);else persistSharedLocal();}
+function wRuleMap(tab,rid,scopeKey){const t=SHARED.tabs[tab];if(!t)return;t.ruleMap=t.ruleMap||{};
+ if(scopeKey)t.ruleMap[rid]=scopeKey;else delete t.ruleMap[rid];
+ delete AGGCACHE[t.client];
+ if(HAVE_FB)DB.ref('tabs/'+tab+'/ruleMap/'+encK(rid)).set(scopeKey||null).catch(fbErr);else persistSharedLocal();}
 function wDelScope(tab,key){const t=SHARED.tabs[tab];if(!t)return;t.delS[key]=true;
+ // limpa reatribuições de regras que apontavam para este escopo (revertem ao escopo base)
+ if(t.ruleMap){Object.keys(t.ruleMap).forEach(rid=>{if(t.ruleMap[rid]===key){delete t.ruleMap[rid];if(HAVE_FB)DB.ref('tabs/'+tab+'/ruleMap/'+encK(rid)).set(null).catch(fbErr);}});}
+ delete AGGCACHE[t.client];
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delS/'+encK(key)).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
 function wDelAtt(tab,att){const t=SHARED.tabs[tab];if(!t)return;t.delA[att]=true;
  if(HAVE_FB)DB.ref('tabs/'+tab+'/delA/'+att).set(true).catch(fbErr);else persistSharedLocal();renderActive();}
 function wAddScope(tab,obj){const t=SHARED.tabs[tab];if(!t)return;t.addS.push(obj);
- if(HAVE_FB)DB.ref('tabs/'+tab+'/addS').push(obj).catch(fbErr);else persistSharedLocal();renderActive();}
+ if(t.delS)delete t.delS[obj.key];
+ if(HAVE_FB){DB.ref('tabs/'+tab+'/addS').push(obj).catch(fbErr);DB.ref('tabs/'+tab+'/delS/'+encK(obj.key)).set(null).catch(fbErr);}else persistSharedLocal();renderActive();}
 function wAddAtt(tab,obj){const t=SHARED.tabs[tab];if(!t)return;let id;
  if(HAVE_FB){const r=DB.ref('tabs/'+tab+'/addA').push();id=r.key;t.addA.push(Object.assign({id:id,share:0,comp:{}},obj));r.set(obj).catch(fbErr);}
  else{id='att'+Date.now();t.addA.push(Object.assign({id:id,share:0,comp:{}},obj));persistSharedLocal();}renderActive();}
 function wAddTab(obj,cb){let id;
- if(HAVE_FB){const r=DB.ref('tabs').push();id=r.key;SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},delS:{},delA:{},addS:[],addA:[]};r.set(obj).catch(fbErr);}
- else{id='c'+Date.now();SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},delS:{},delA:{},addS:[],addA:[]};persistSharedLocal();}cb(id);}
+ if(HAVE_FB){const r=DB.ref('tabs').push();id=r.key;SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},ruleMap:{},delS:{},delA:{},addS:[],addA:[]};r.set(obj).catch(fbErr);}
+ else{id='c'+Date.now();SHARED.tabs[id]={client:obj.client,name:obj.name,ov:{},escVal:{},ruleMap:{},delS:{},delA:{},addS:[],addA:[]};persistSharedLocal();}cb(id);}
 function wDelTab(id){delete SHARED.tabs[id];if(HAVE_FB)DB.ref('tabs/'+id).remove().catch(fbErr);else persistSharedLocal();renderActive();}
 function wRenameTab(id,name){if(SHARED.tabs[id])SHARED.tabs[id].name=name;if(HAVE_FB)DB.ref('tabs/'+id+'/name').set(name).catch(fbErr);else persistSharedLocal();renderActive();}
-function wMonth(att,val){if(val)SHARED.plano.months[att]=val;else delete SHARED.plano.months[att];if(HAVE_FB)DB.ref('plano/months/'+att).set(val||null).catch(fbErr);else persistSharedLocal();}
+function wMonthH(attId,hosp,val){const k=attId+'@@'+hosp;if(val)SHARED.plano.monthsH[k]=val;else delete SHARED.plano.monthsH[k];
+ if(HAVE_FB)DB.ref('plano/monthsH/'+encK(k)).set(val||null).catch(fbErr);else persistSharedLocal();}
 function tabsOrder(){return Object.keys(SHARED.tabs).sort();}
+
+// ---- índice de regras (para drill-down e cobertura dinâmica) ----
+let RULES_BY_HOSP={};
+function buildRuleIdx(){RULES_BY_HOSP={};DATA.rules.forEach(r=>{r._rid=r.hosp+'||'+r.cod;(RULES_BY_HOSP[r.hosp]=RULES_BY_HOSP[r.hosp]||[]).push(r);});}
+function hospTabId(H){return tabsOrder().find(id=>SHARED.tabs[id].client===H)||null;}
+let AGGCACHE={};
+// bucket de regras por escopo para um hospital, aplicando o ruleMap da aba do hospital
+function hospAgg(H){if(AGGCACHE[H])return AGGCACHE[H];
+ const tabId=hospTabId(H);const map=(tabId&&SHARED.tabs[tabId].ruleMap)||{};
+ const rules=RULES_BY_HOSP[H]||[];const agg={};
+ rules.forEach(r=>{const k=map[r._rid]||(r.cat+'||'+r.escopo);const a=agg[k]||(agg[k]={gen:0,res:0,rules:[]});a.gen+=r.gen;a.res+=r.res;a.rules.push(r);});
+ return AGGCACHE[H]=agg;}
+function hospHasScope(H,key){const a=hospAgg(H)[key];return !!(a&&a.rules.length);}
+function hospScopeStat(H,key){const a=hospAgg(H)[key];return a?{gen:a.gen,res:a.res}:{gen:0,res:0};}
 
 // ---- helpers de exibição ----
 function tierCls(t){return t==='Essencial'?'t-ess':t==='Avançado'?'t-adv':t==='Completo'?'t-comp':'t-na';}
 function tierAbbr(t){return t==='Essencial'?'E':t==='Avançado'?'A':t==='Completo'?'C':'—';}
 function tchip(t,editable,attId,key){return `<span class="tchip ${tierCls(t)}" ${editable?`data-att="${esc(attId)}" data-key="${esc(key)}"`:''} title="${t||'não aplicável'}">${tierAbbr(t)}</span>`;}
 function shareStyle(s,mx){const a=(0.14+(s/mx)*0.70).toFixed(2);return `background:rgba(79,140,255,${a});color:${(s/mx)>0.42?'#ffffff':'#cfe0ff'}`;}
-function compTip(a){const entries=Object.entries(a.comp).sort((x,y)=>y[1]-x[1]);let sum=entries.reduce((s,e)=>s+e[1],0);
+function effShare(a){const v=SHARED.attShare&&SHARED.attShare[a.id];return v!=null?v:(a.share||0);}
+function compTip(a){const entries=Object.entries(a.comp||{}).sort((x,y)=>y[1]-x[1]);let sum=entries.reduce((s,e)=>s+e[1],0);
  let parts=entries.slice(0,4).map(e=>`<b>${e[1]}%</b> ${esc(e[0])}`);if(sum<99)parts.push(`<b>${Math.max(0,100-sum)}%</b> Outros`);
- return `<div class="tt"><div style="font-weight:700;margin-bottom:4px">${esc(a.name)}</div><div class="mono-sm" style="margin-bottom:6px">${a.group} · ${a.share}% do faturamento (est.)</div>${entries.length?'Composição estimada da conta:<br>'+parts.join(' · '):'<span class="mono-sm">atendimento adicionado manualmente</span>'}</div>`;}
+ return `<div class="tt"><div style="font-weight:700;margin-bottom:4px">${esc(a.name)}</div><div class="mono-sm" style="margin-bottom:6px">${a.group} · ${effShare(a)}% do faturamento (est.)</div>${entries.length?'Composição estimada da conta:<br>'+parts.join(' · '):'<span class="mono-sm">atendimento adicionado manualmente</span>'}</div>`;}
 function showModal(html){document.getElementById('modal-box').innerHTML=html;document.getElementById('modal').style.display='flex';}
 function closeModal(){document.getElementById('modal').style.display='none';}
 
-// ---- views ----
-function viewAtts(id){const c=SHARED.tabs[id];let list=DATA.attendance.filter(a=>!(c&&c.delA&&c.delA[a.id]));
- if(c&&c.addA)c.addA.forEach(a=>list.push(a));
- return list.slice().sort((a,b)=>(a.group==='Externo'?0:1)-(b.group==='Externo'?0:1));}
-function viewScopes(id){const c=SHARED.tabs[id];let list=DATA.scopeCatalog.filter(s=>!(c&&c.delS&&c.delS[s.key]));
- if(c&&c.addS)c.addS.forEach(s=>list.push(s));
- const byCat={};list.forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
- const out=[];DATA.cat_order.forEach(cat=>{if(byCat[cat])out.push([cat,byCat[cat]]);});
- Object.keys(byCat).forEach(cat=>{if(!DATA.cat_order.includes(cat))out.push([cat,byCat[cat]]);});
- return out;}
-function curTier(id,att,key){
- if(id==='geral'){const ov=SHARED.geralOv[att]&&SHARED.geralOv[att][key];if(ov!=null)return ov==='NA'?null:ov;const m=DATA.geralMatrix[att];return m?(m[key]||null):null;}
- const c=SHARED.tabs[id];const ov=c&&c.ov[att]&&c.ov[att][key];if(ov!=null)return ov==='NA'?null:ov;return curTier('geral',att,key);}
-function cycleTier(id,att,key){const cur=curTier(id,att,key);const order=[null,'Essencial','Avançado','Completo'];const nxt=order[(order.indexOf(cur)+1)%4];const val=nxt===null?'NA':nxt;
- if(id==='geral')wGeralTier(att,key,val);else wTabTier(id,att,key,val);
- const eff=(val==='NA')?null:val;const chips=document.querySelectorAll('#mxwrap .tchip[data-att]');
- for(let i=0;i<chips.length;i++){const c=chips[i];if(c.dataset.att===att&&c.dataset.key===key){c.className='tchip '+tierCls(eff);c.textContent=tierAbbr(eff);c.title=eff||'não aplicável';break;}}
+// ---- aplicabilidade por (atendimento, escopo): 'Aplicável' / 'NA' (binário) ----
+function baseAppl(att,key){const m=DATA.geralMatrix[att];return !!(m&&m[key]!=null);}
+function curAppl(id,att,key){
+ if(id==='geral'){const ov=SHARED.geralOv[att]&&SHARED.geralOv[att][key];if(ov!=null)return ov!=='NA';return baseAppl(att,key);}
+ const c=SHARED.tabs[id];const ov=c&&c.ov[att]&&c.ov[att][key];if(ov!=null)return ov!=='NA';return curAppl('geral',att,key);}
+function cycleAppl(id,att,key){const cur=curAppl(id,att,key);const val=cur?'NA':'Aplicável';
+ if(id==='geral')wGeralAppl(att,key,val);else wTabAppl(id,att,key,val);
+ const eff=(val!=='NA');const chips=document.querySelectorAll('#mxwrap .apcell[data-att]');
+ for(let i=0;i<chips.length;i++){const c=chips[i];if(c.dataset.att===att&&c.dataset.key===key){c.innerHTML=applMark(eff);break;}}
  if(id!=='geral')refreshSummaryInline(id);}
-// ---- Validação (coluna única por escopo, aba "Análise de escopos") ----
-// Reaproveita exatamente os mesmos dados/curTier por atendimento; "Completo" é
-// tratado como "Avançado" apenas para exibição/edição nesta coluna (sem criar
-// nenhum dado novo — os valores originais gravados continuam nos mesmos locais).
+function applMark(has){return has?'<span class="chk-ok" title="Aplicável">✔</span>':'<span class="chk-no" title="NA">✘</span>';}
+
+// ---- Validação (coluna única por escopo): Essencial / Avançado / NA ----
 function escDisplayTier(t){return t==='Completo'?'Avançado':t;}
-const ESC_TIERS=['Essencial','Avançado']; // usado apenas no resumo da aba "Análise de escopos" — sem "Completo"
-// curEscVal/cycleEscVal: campo de Validação é INDEPENDENTE dos dados de aplicabilidade
-// por setor (curTier/hospHas). Nunca escreve em geralOv/tabs[].ov — assim os ✔/✘ de
-// cada setor continuam refletindo somente os dados originais do hospital.
+const ESC_TIERS=['Essencial','Avançado'];
+// tier padrão do escopo, derivado da classificação existente (geralMatrix): Essencial vence Avançado/Completo
+let ESC_TIER_BASE=null;
+function buildEscTierBase(){ESC_TIER_BASE={};for(const att in DATA.geralMatrix){const m=DATA.geralMatrix[att];for(const key in m){const t=m[key];if(t==null)continue;const cur=ESC_TIER_BASE[key];if(t==='Essencial'||cur==null)ESC_TIER_BASE[key]=(t==='Essencial')?'Essencial':(cur==='Essencial'?'Essencial':'Avançado');}}}
+function baseEscTier(key){if(!ESC_TIER_BASE)buildEscTierBase();return ESC_TIER_BASE[key]||null;}
 function curEscVal(id,key){
- if(id==='geral')return SHARED.geralEscVal[key]||null;
+ if(id==='geral'){const v=SHARED.geralEscVal[key];if(v!=null)return v==='NA'?null:v;return baseEscTier(key);}
  const c=SHARED.tabs[id];const v=c&&c.escVal&&c.escVal[key];if(v!=null)return v==='NA'?null:v;return curEscVal('geral',key);}
 function cycleEscVal(id,key){const cur=curEscVal(id,key);const order=[null,'Essencial','Avançado'];const nxt=order[(order.indexOf(cur)+1)%3];const val=nxt===null?'NA':nxt;
  if(id==='geral')wGeralEscVal(key,val);else wTabEscVal(id,key,val);
  const chip=document.querySelector('#mxwrap .tchip[data-esckey="'+CSS.escape(key)+'"]');
  if(chip){const eff=val==='NA'?null:val;chip.className='tchip '+tierCls(eff);chip.textContent=tierAbbr(eff);chip.title=eff||'não aplicável';}
- if(id!=='geral')refreshSummaryInline(id);}
+ refreshSummaryInline(id);}
 
 function renderSubtabs(){const bar=document.getElementById('subtabs');let h='';
  h+=`<div class="subtab ${UI.active==='geral'?'active':''}" data-id="geral">Geral</div>`;
@@ -594,6 +637,21 @@ function openClientModal(){const opts=DATA.clients.map(c=>`<option value="${esc(
  const setN=()=>{const c=DATA.clients.find(x=>x.hosp===sel.value);nm.value=c?c.label:sel.value;};setN();sel.onchange=setN;
  document.getElementById('m-ok').onclick=()=>{wAddTab({client:sel.value,name:nm.value||sel.value},id=>{UI.active=id;saveUI();closeModal();renderEscopos();});};}
 
+// lista plana de escopos de uma aba (catálogo - delS + addS), respeitando cat_order
+function tabScopeList(tabId){const c=tabId==='geral'?null:SHARED.tabs[tabId];
+ let list=DATA.scopeCatalog.map(s=>({key:s.key,cat:s.cat,escopo:s.escopo,op:''})).filter(s=>!(c&&c.delS&&c.delS[s.key]));
+ if(c&&c.addS)c.addS.forEach(s=>{if(!(c.delS&&c.delS[s.key]))list.push({key:s.key,cat:s.cat,escopo:s.escopo,op:s.op||''});});
+ return list;}
+function viewScopes(id){const list=tabScopeList(id);
+ const byCat={};list.forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
+ const out=[];DATA.cat_order.forEach(cat=>{if(byCat[cat])out.push([cat,byCat[cat]]);});
+ Object.keys(byCat).forEach(cat=>{if(!DATA.cat_order.includes(cat))out.push([cat,byCat[cat]]);});
+ return out;}
+function viewAtts(id){const c=id==='geral'?null:SHARED.tabs[id];let list=DATA.attendance.filter(a=>!(c&&c.delA&&c.delA[a.id]));
+ if(c&&c.addA)c.addA.forEach(a=>list.push(a));
+ return list.slice().sort((a,b)=>(a.group==='Externo'?0:1)-(b.group==='Externo'?0:1));}
+function flatScopes(groups){const o=[];groups.forEach(([cat,scs])=>scs.forEach(s=>o.push(s)));return o;}
+
 function renderEscopos(){
  const _wx=window.scrollX,_wy=window.scrollY;
  renderSubtabs();
@@ -601,56 +659,109 @@ function renderEscopos(){
  if(!isGeral&&!c){UI.active='geral';saveUI();return renderEscopos();}
  const client=isGeral?null:c.client;const atts=viewAtts(id);const groups=viewScopes(id);const cont=document.getElementById('escopos-view');
  let h='<div class="toolrow"><span class="fbstat" id="fb-status">'+fbBadge()+'</span>';
- if(isGeral)h+=`<span class="hint">Classificação global editável — clique na Validação (Essencial → Avançado → —). Sincroniza em tempo real para todos.</span>`;
- else h+=`<span class="hint">Visão de <b>${esc(client)}</b> · ✔/✘ = hospital já tem o escopo. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-att">+ Adicionar Atendimento</button>`;
+ if(isGeral)h+=`<span class="hint">Classificação global editável — <b>Validação</b> (E → A → —) e <b>aplicabilidade</b> por atendimento (✔ ↔ ✘). Sincroniza em tempo real. Duplo-clique no % do atendimento p/ editar.</span>`;
+ else h+=`<span class="hint">Visão de <b>${esc(client)}</b> · marca ✔ do escopo = hospital já cobre (via regras). Clique no escopo p/ ver e reatribuir regras. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-att">+ Adicionar Atendimento</button>`;
  h+='</div>';
  if(!isGeral)h+='<div id="esc-summary">'+renderSummary(id,atts,groups,client)+'</div>';
  h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo</th><th class="valh">Validação</th>';
- const maxShare=Math.max.apply(null,DATA.attendance.map(x=>x.share))||1;
- atts.forEach(a=>{const sh=a.share>0?`<span class="att-share" style="${shareStyle(a.share,maxShare)}">${a.share}%</span>`:`<span class="att-share" style="color:var(--muted);background:#1c2537">novo</span>`;
+ const maxShare=Math.max.apply(null,DATA.attendance.map(x=>effShare(x)).concat([1]))||1;
+ atts.forEach(a=>{const shv=effShare(a);const sh=shv>0?`<span class="att-share" data-share-att="${esc(a.id)}" title="duplo-clique para editar" style="${shareStyle(shv,maxShare)}">${shv}%</span>`:`<span class="att-share" data-share-att="${esc(a.id)}" title="duplo-clique para editar" style="color:var(--muted);background:#1c2537">novo</span>`;
   h+=`<th class="att-h" data-att="${a.id}">${!isGeral?`<span class="att-del" data-dela="${a.id}" title="excluir atendimento">✕</span>`:''}${sh}<span class="att-name">${esc(a.name)}</span>${compTip(a)}</th>`;});
  h+='</tr></thead><tbody>';
  groups.forEach(([cat,scs])=>{h+=`<tr class="catrow"><td colspan="${atts.length+2}">${esc(cat)}</td></tr>`;
-  scs.forEach(s=>{const mark=isGeral?'':(DATA.hospHas[client]&&DATA.hospHas[client][s.key]?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>');
+  scs.forEach(s=>{const has=isGeral?null:hospHasScope(client,s.key);
+   const mark=isGeral?'':(has?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>');
    const op=s.op?`<span class="oplabel">${esc(s.op)}</span>`:'';
    const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
-   h+=`<tr><th class="rowh">${mark}${esc(s.escopo)}${op}${del}</th>`;
+   const drill=isGeral?'':`<span class="drill" data-drill="${esc(s.key)}" title="ver regras do escopo">▸</span>`;
+   h+=`<tr data-scoperow="${esc(s.key)}"><th class="rowh">${drill}${mark}${esc(s.escopo)}${op}${del}</th>`;
    const vt=curEscVal(id,s.key);
    h+=`<td class="valcol"><span class="tchip ${tierCls(vt)}" data-esckey="${esc(s.key)}" title="${vt||'não aplicável'}">${tierAbbr(vt)}</span></td>`;
-   atts.forEach(a=>{const t=curTier(id,a.id,s.key);const has=t!=null;
-    h+=`<td class="chkcol">${has?`<span class="chk-ok" title="${esc(escDisplayTier(t))}">✔</span>`:'<span class="chk-no">✘</span>'}</td>`;});
+   atts.forEach(a=>{const ap=curAppl(id,a.id,s.key);
+    h+=`<td class="chkcol apcell" data-att="${esc(a.id)}" data-key="${esc(s.key)}">${applMark(ap)}</td>`;});
    h+='</tr>';});});
  h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
  window.scrollTo(_wx,_wy);
  if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}window.scrollTo(_wx,_wy);});
+ // handlers
  cont.querySelectorAll('.tchip[data-esckey]').forEach(el=>el.onclick=()=>cycleEscVal(id,el.dataset.esckey));
+ cont.querySelectorAll('.apcell[data-att]').forEach(el=>el.onclick=()=>cycleAppl(id,el.dataset.att,el.dataset.key));
+ cont.querySelectorAll('.att-share[data-share-att]').forEach(el=>el.ondblclick=e=>{e.stopPropagation();editShare(el);});
  if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
-  cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=()=>wDelScope(id,el.dataset.dels));
-  cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=()=>wDelAtt(id,el.dataset.dela));attachSummaryHandlers(id);}}
+  cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelScope(id,el.dataset.dels);});
+  cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelAtt(id,el.dataset.dela);});
+  cont.querySelectorAll('.drill[data-drill]').forEach(el=>el.onclick=e=>{e.stopPropagation();toggleDrill(id,el.dataset.drill,el);});
+  attachSummaryHandlers(id);}}
+
+// edição inline do % de faturamento
+function editShare(el){const attId=el.dataset.shareAtt;const cur=el.textContent.replace('%','').replace('novo','').trim();
+ const inp=document.createElement('input');inp.type='number';inp.step='0.1';inp.value=cur||'';
+ inp.style.cssText='width:56px;background:#0b1120;border:1px solid var(--accent);color:var(--txt);border-radius:6px;padding:1px 4px;font-size:11px;font-weight:800';
+ el.replaceWith(inp);inp.focus();inp.select();
+ const commit=()=>{let v=parseFloat(inp.value);if(isNaN(v)||v<0)v=0;wAttShare(attId,Math.round(v*10)/10);renderEscopos();};
+ inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){renderEscopos();}};
+ inp.onblur=commit;}
+
+// drill-down: regras que compõem o escopo (na aba do cliente) + reatribuição
+function toggleDrill(id,key,caret){const client=SHARED.tabs[id].client;
+ const row=document.querySelector('#mxwrap tr[data-scoperow="'+CSS.escape(key)+'"]');if(!row)return;
+ const nxt=row.nextElementSibling;
+ if(nxt&&nxt.classList.contains('rd-row')){nxt.remove();caret.classList.remove('open');return;}
+ caret.classList.add('open');
+ const agg=hospAgg(client)[key];const rules=(agg&&agg.rules)||[];
+ const ncols=(viewAtts(id).length)+2;
+ const optHtml=scopeOptionsHtml(id);
+ let inner='<div class="rd-box"><div class="rd-title">Regras que compõem <b>'+esc(key.split('||').pop())+'</b> em '+esc(client)+' <span class="mono-sm">('+rules.length+')</span></div>';
+ if(!rules.length)inner+='<div class="mono-sm" style="padding:6px 2px">Nenhuma regra associada. Reatribua regras de outros escopos para cá pelo seletor no drill-down do escopo de origem.</div>';
+ else{inner+='<table class="rd-tbl"><thead><tr><th>Código</th><th>Descrição</th><th class="num">Alertas</th><th class="num">Efet.</th><th>Escopo (reatribuir)</th></tr></thead><tbody>';
+  rules.forEach(r=>{const e=effVal(r.gen,r.res);
+   inner+='<tr><td class="code">'+esc(r.cod)+'</td><td>'+esc(r.desc)+'</td><td class="num muted">'+r.gen.toLocaleString('pt-BR')+'</td><td class="num" style="color:'+effColor(e)+';font-weight:700">'+(e==null?'—':pct(e))+'</td>'
+    +'<td><select class="rule-scope-sel" data-rid="'+esc(r._rid)+'">'+optHtml.replace('value="'+esc(key).replace(/"/g,'&quot;')+'"','value="'+esc(key).replace(/"/g,'&quot;')+'" selected')+'</select></td></tr>';});
+  inner+='</tbody></table>';}
+ inner+='</div>';
+ const tr=document.createElement('tr');tr.className='rd-row';tr.innerHTML='<td colspan="'+ncols+'">'+inner+'</td>';
+ row.after(tr);
+ tr.querySelectorAll('.rule-scope-sel').forEach(sel=>sel.onchange=()=>{wRuleMap(id,sel.dataset.rid,sel.value);renderEscopos();});}
+function scopeOptionsHtml(id){let h='';viewScopes(id).forEach(([cat,scs])=>{h+='<optgroup label="'+esc(cat)+'">';scs.forEach(s=>{h+='<option value="'+esc(s.key).replace(/"/g,'&quot;')+'">'+esc(s.escopo)+(s.op?' · '+esc(s.op):'')+'</option>';});h+='</optgroup>';});return h;}
+
 function refreshSummaryInline(id){if(id==='geral')return;const c=SHARED.tabs[id];if(!c)return;
  const box=document.getElementById('esc-summary');if(!box)return;
  box.innerHTML=renderSummary(id,viewAtts(id),viewScopes(id),c.client);attachSummaryHandlers(id);}
 function heatBg(p){let r,g,b;if(p<0.5){const k=p/0.5;r=239+(245-239)*k;g=68+(158-68)*k;b=68+(11-68)*k;}else{const k=(p-0.5)/0.5;r=245+(34-245)*k;g=158+(197-158)*k;b=11+(94-11)*k;}return 'rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+',0.30)';}
 function heatFg(p){return p>=0.6?'#9bf0ba':p>=0.3?'#f8d977':'#ffa3a3';}
+function covCellHtml(have,tot,mode,bold){if(tot===0)return '<td style="color:var(--muted)">—</td>';
+ const p=have/tot;const val=mode==='pct'?Math.round(p*100)+'%':have+'/'+tot;
+ return '<td style="background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:'+(bold?800:700)+'" title="'+have+' de '+tot+' escopos">'+val+'</td>';}
 function renderSummary(id,atts,groups,client){
- const mode=UI.escSumMode||'abs';let gHave=0,gTot=0;
- let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div><span class="penholder"></span></div>';
- h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Cobertura</th><th class="ttcol" title="Total da tabela — todos os tipos de conta somados">TT</th>';
- atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
- ESC_TIERS.forEach(tier=>{let cells='',rowHave=0,rowTot=0;
-  atts.forEach(a=>{let tot=0,have=0;groups.forEach(([cat,scs])=>scs.forEach(s=>{const t=escDisplayTier(curTier(id,a.id,s.key));if(t===tier){tot++;if(DATA.hospHas[client]&&DATA.hospHas[client][s.key])have++;}}));
-   gHave+=have;gTot+=tot;rowHave+=have;rowTot+=tot;
-   const p=tot?have/tot:0;
-   let val=tot===0?'—':(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);
-   let st=tot===0?'color:var(--muted)':('background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700');
-   cells+=`<td style="${st}">${val}</td>`;});
-  const rp=rowTot?rowHave/rowTot:0;
-  const rowVal=rowTot===0?'—':(mode==='pct'?Math.round(rp*100)+'%':rowHave+'/'+rowTot);
-  const rowSt=rowTot===0?'color:var(--muted)':('background:'+heatBg(rp)+';color:'+heatFg(rp)+';font-weight:800');
-  h+=`<tr><td class="rh"><span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}</td><td class="ttcol" style="${rowSt}" title="${tier} · total de todos os tipos de conta">${rowVal}</td>`+cells+'</tr>';});
- h+='</tbody></table></div>';
+ const mode=UI.escSumMode||'abs';const scopes=flatScopes(groups);
+ // penetração global = escopos com check / total de escopos
+ let gHave=0;scopes.forEach(s=>{if(hospHasScope(client,s.key))gHave++;});const gTot=scopes.length;
  const pen=gTot?Math.round(gHave/gTot*100):0;const pcol=pen>=80?'var(--green)':pen>=40?'var(--amber)':'var(--red)';
- h=h.replace('<span class="penholder"></span>',`<span class="pencard" title="Escopos cobertos ÷ total de escopos classificados para este hospital"><b style="color:${pcol}">${pen}%</b> penetração <span class="mono-sm">(${gHave}/${gTot} escopos)</span></span>`);
+ let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div>'
+  +`<span class="pencard" title="Escopos cobertos ÷ total de escopos"><b style="color:${pcol}">${pen}%</b> penetração <span class="mono-sm">(${gHave}/${gTot} escopos)</span></span></div>`;
+ // ---- Tabela 1: Validação × tipo de atendimento ----
+ h+='<div class="mono-sm" style="margin:2px 0 4px">Cobertura por tipo de atendimento</div>';
+ h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Validação</th><th class="ttcol" title="Total da tabela — todos os tipos de conta somados">TT</th>';
+ atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
+ const rowsT1=ESC_TIERS.concat(['Total']);
+ rowsT1.forEach(tier=>{let cells='',ttHave=0,ttTot=0;
+  atts.forEach(a=>{let tot=0,have=0;scopes.forEach(s=>{if(!curAppl(id,a.id,s.key))return;const vt=escDisplayTier(curEscVal(id,s.key));
+    if(tier==='Total'||vt===tier){tot++;if(hospHasScope(client,s.key))have++;}});
+   ttHave+=have;ttTot+=tot;cells+=covCellHtml(have,tot,mode,false);});
+  const label=tier==='Total'?'<b>Total</b>':`<span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}`;
+  h+=`<tr><td class="rh">${label}</td>`+covCellHtml(ttHave,ttTot,mode,true)+cells+'</tr>';});
+ h+='</tbody></table></div>';
+ // ---- Tabela 2: Validação × categoria de escopo ----
+ h+='<div class="mono-sm" style="margin:2px 0 4px">Cobertura por categoria de escopo</div>';
+ h+='<div class="mx-wrap" style="max-height:none;margin-bottom:6px"><table class="sumtable"><thead><tr><th class="rh">Validação</th><th class="ttcol" title="Total de todas as categorias">TT</th>';
+ groups.forEach(([cat])=>h+=`<th>${esc(cat)}</th>`);h+='</tr></thead><tbody>';
+ rowsT1.forEach(tier=>{let cells='',ttHave=0,ttTot=0;
+  groups.forEach(([cat,scs])=>{let tot=0,have=0;scs.forEach(s=>{const vt=escDisplayTier(curEscVal(id,s.key));
+    if(tier==='Total'||vt===tier){tot++;if(hospHasScope(client,s.key))have++;}});
+   ttHave+=have;ttTot+=tot;cells+=covCellHtml(have,tot,mode,false);});
+  const label=tier==='Total'?'<b>Total</b>':`<span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}`;
+  h+=`<tr><td class="rh">${label}</td>`+covCellHtml(ttHave,ttTot,mode,true)+cells+'</tr>';});
+ h+='</tbody></table></div>';
  return h;}
 function attachSummaryHandlers(id){const box=document.getElementById('esc-summary');if(!box)return;
  box.querySelectorAll('#esc-sum-mode button').forEach(b=>b.onclick=()=>{UI.escSumMode=b.dataset.m;saveUI();refreshSummaryInline(id);});}
@@ -665,51 +776,77 @@ function openAddAtt(id){showModal(`<h3>Adicionar tipo de atendimento</h3><label>
   if(!name){alert('Descrição é obrigatória');return;}wAddAtt(id,{name:name,group:grp});closeModal();};}
 
 // ======================= PLANO DE VIRADA =======================
-let SCOPE_STATS={};
-function buildScopeStats(){SCOPE_STATS={};DATA.coverage.categories.forEach(c=>{DATA.hosps.forEach(h=>{const o=c.hosp[h];c.scopes.forEach(s=>{(SCOPE_STATS[h]=SCOPE_STATS[h]||{})[c.cat+'||'+s]=o.stats[s];});});});}
-function scopeEff(hosp,key){const st=SCOPE_STATS[hosp]&&SCOPE_STATS[hosp][key];if(!st||st.gen<=0)return null;return st.res/st.gen;}
+function buildScopeStats(){/* mantido por compatibilidade — stats agora vêm de hospAgg */}
 function scopeInfo(key){let s=DATA.scopeCatalog.find(x=>x.key===key);if(s)return s;
  for(const id in SHARED.tabs){const f=(SHARED.tabs[id].addS||[]).find(x=>x.key===key);if(f)return f;}
  const p=String(key).split('||');return {key,cat:p.length>2?p[1]:(p[0]||'—'),escopo:p[p.length-1]||key};}
 function planoAtts(){const list=DATA.attendance.slice();const seen={};list.forEach(a=>seen[a.id]=1);
  tabsOrder().forEach(id=>(SHARED.tabs[id].addA||[]).forEach(a=>{if(!seen[a.id]){seen[a.id]=1;list.push(a);}}));return list;}
-function attScopeKeys(att){const set={};const gm=DATA.geralMatrix[att];if(gm)Object.keys(gm).forEach(k=>set[k]=1);
- if(SHARED.geralOv[att])Object.keys(SHARED.geralOv[att]).forEach(k=>{if(SHARED.geralOv[att][k]!=='NA')set[k]=1;});
- tabsOrder().forEach(id=>{const ov=SHARED.tabs[id].ov[att];if(ov)Object.keys(ov).forEach(k=>{if(ov[k]!=='NA')set[k]=1;});});
- return Object.keys(set);}
-function hospTierFor(hosp,att,key){const tabId=tabsOrder().find(id=>SHARED.tabs[id].client===hosp);return curTier(tabId||'geral',att,key);}
+// escopos aplicáveis a um atendimento, no contexto de um hospital (aba do hospital ou geral)
+function applicableScopes(hosp,attId){const tabId=hospTabId(hosp)||'geral';const list=tabScopeList(tabId==='geral'?'geral':tabId);
+ return list.filter(s=>curAppl(tabId,attId,s.key));}
+
 function renderPlanoSummary(){
- const tabs=tabsOrder();const mode=UI.planoSumMode||'abs';const f=UI.planoSumFilter||{'Essencial':true,'Avançado':true,'Completo':true};
+ const tabs=tabsOrder();const mode=UI.planoSumMode||'abs';const f=UI.planoSumFilter||{'Essencial':true,'Avançado':true};
  let h='<div class="section-title" style="font-size:15px;margin-bottom:8px">Resumo de cobertura por hospital</div>';
  h+='<div class="toolrow" style="margin-bottom:8px"><span class="tglabel">Métrica:</span><div class="toggle" id="psum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button><button class="'+(mode==='eff'?'active':'')+'" data-m="eff">Efetividade</button></div><span class="tglabel" style="margin-left:8px">Tiers:</span>';
  TIERS.forEach(tr=>h+='<span class="mchip '+(f[tr]?'on':'')+'" data-psf="'+tr+'">'+tr+'</span>');
  h+='</div>';
  if(!tabs.length){h+='<div class="empty">Crie visões de cliente na aba Análise Escopos para popular este resumo.</div>';return h+'<hr style="border:none;border-top:1px solid var(--line);margin:18px 0">';}
+ const cellPS=(have,tot,gen,res)=>{let val,style;
+  if(mode==='eff'){const e=gen>0?res/gen:null;if(e==null){val='—';style='color:var(--muted)';}else{val=Math.round(e*100)+'%';style='background:'+heatBg(e)+';color:'+heatFg(e)+';font-weight:700';}}
+  else{const p=tot?have/tot:0;if(tot===0){val='—';style='color:var(--muted)';}else{val=(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);style='background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700';}}
+  return '<td style="'+style+'" title="'+(mode==='eff'?res+' resolvidos / '+gen+' alertas':have+' de '+tot+' escopos')+'">'+val+'</td>';};
+ // ---- Tabela A: tipos de atendimento × hospitais (+ Total) ----
+ h+='<div class="mono-sm" style="margin:2px 0 4px">Por tipo de atendimento</div>';
  h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th>';
- tabs.forEach(id=>h+=`<th>${esc(SHARED.tabs[id].name)}</th>`);h+='</tr></thead><tbody>';
+ tabs.forEach(id=>h+=`<th>${esc(SHARED.tabs[id].name)}</th>`);h+='<th class="ttcol">Total</th></tr></thead><tbody>';
  planoAtts().forEach(a=>{h+=`<tr><td class="rh">${esc(a.name)}</td>`;
-  tabs.forEach(id=>{const tab=SHARED.tabs[id];
+  let rTot=0,rHave=0,rGen=0,rRes=0;
+  tabs.forEach(id=>{const tab=SHARED.tabs[id];const H=tab.client;
    if(tab.delA&&tab.delA[a.id]){h+='<td style="color:var(--muted);font-weight:700">NA</td>';return;}
-   let keys=DATA.scopeCatalog.filter(s=>!(tab.delS&&tab.delS[s.key])).map(s=>s.key);
-   (tab.addS||[]).forEach(s=>keys.push(s.key));
-   let tot=0,have=0,gen=0,res=0;const ss=SCOPE_STATS[tab.client]||{};
-   keys.forEach(key=>{const tt=curTier(id,a.id,key);if(tt&&f[tt]){tot++;if(DATA.hospHas[tab.client]&&DATA.hospHas[tab.client][key])have++;const st2=ss[key];if(st2){gen+=st2.gen;res+=st2.res;}}});
-   let val,style;
-   if(mode==='eff'){const e=gen>0?res/gen:null;if(e==null){val='—';style='color:var(--muted)';}else{val=Math.round(e*100)+'%';style='background:'+heatBg(e)+';color:'+heatFg(e)+';font-weight:700';}}
-   else{const p=tot?have/tot:0;if(tot===0){val='—';style='color:var(--muted)';}else{val=(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);style='background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700';}}
-   h+=`<td style="${style}" title="${mode==='eff'?res+' resolvidos / '+gen+' alertas':have+' de '+tot+' escopos'}">${val}</td>`;});
-  h+='</tr>';});
- h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
-function renderPlano(){
- const cont=document.getElementById('plano-setup');const atts=planoAtts();
- let h=renderPlanoSummary()+'<div class="mx-wrap" style="max-height:none;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th><th>Grupo</th><th>% faturamento (est.)</th><th>Mês de rollout</th></tr></thead><tbody>';
- atts.forEach(a=>{const cur=SHARED.plano.months[a.id]||'';const added=!DATA.geralMatrix[a.id];
-  h+=`<tr><td class="rh">${esc(a.name)}${added?' <span class="oplabel" style="background:#16233f;border-color:#294066;color:#8bb4ff">novo</span>':''}</td><td class="mono-sm">${a.group}</td><td style="font-weight:700">${a.share>0?a.share+'%':'—'}</td>
-   <td><select class="mon-sel" data-mon="${a.id}"><option value="">—</option>${monthOptions().map(m=>`<option ${cur===m?'selected':''}>${m}</option>`).join('')}</select></td></tr>`;});
+   let tot=0,have=0,gen=0,res=0;
+   tabScopeList(id).forEach(s=>{if(!curAppl(id,a.id,s.key))return;const vt=escDisplayTier(curEscVal(id,s.key));if(!(vt&&f[vt]))return;
+    tot++;if(hospHasScope(H,s.key))have++;const st=hospScopeStat(H,s.key);gen+=st.gen;res+=st.res;});
+   rTot+=tot;rHave+=have;rGen+=gen;rRes+=res;h+=cellPS(have,tot,gen,res);});
+  h+=cellPS(rHave,rTot,rGen,rRes).replace('<td ','<td class="ttcol" ');h+='</tr>';});
  h+='</tbody></table></div>';
- h+='<div class="toolrow"><button class="btn-primary" id="btn-gerar">Gerar Plano</button><button class="btn-sec" id="btn-refresh">↻ Atualizar setores</button></div><div id="plano-output"></div>';
+ // ---- Tabela B: categorias de escopo × hospitais (+ linha e coluna Total) ----
+ h+='<div class="mono-sm" style="margin:2px 0 4px">Por categoria de escopo</div>';
+ h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Categoria de escopo</th>';
+ tabs.forEach(id=>h+=`<th>${esc(SHARED.tabs[id].name)}</th>`);h+='<th class="ttcol">Total</th></tr></thead><tbody>';
+ const catAgg={};DATA.cat_order.forEach(c=>catAgg[c]=1);
+ const colTot={},colHave={},colGen={},colRes={};tabs.forEach(id=>{colTot[id]=0;colHave[id]=0;colGen[id]=0;colRes[id]=0;});
+ let gT=0,gH=0,gG=0,gR=0;
+ DATA.cat_order.forEach(cat=>{h+=`<tr><td class="rh">${esc(cat)}</td>`;let rTot=0,rHave=0,rGen=0,rRes=0;
+  tabs.forEach(id=>{const H=SHARED.tabs[id].client;let tot=0,have=0,gen=0,res=0;
+   tabScopeList(id).filter(s=>s.cat===cat).forEach(s=>{const vt=escDisplayTier(curEscVal(id,s.key));if(!(vt&&f[vt]))return;
+    tot++;if(hospHasScope(H,s.key))have++;const st=hospScopeStat(H,s.key);gen+=st.gen;res+=st.res;});
+   colTot[id]+=tot;colHave[id]+=have;colGen[id]+=gen;colRes[id]+=res;
+   rTot+=tot;rHave+=have;rGen+=gen;rRes+=res;h+=cellPS(have,tot,gen,res);});
+  gT+=rTot;gH+=rHave;gG+=rGen;gR+=rRes;h+=cellPS(rHave,rTot,rGen,rRes).replace('<td ','<td class="ttcol" ');h+='</tr>';});
+ h+=`<tr style="background:var(--panel2)"><td class="rh"><b>Total</b></td>`;
+ tabs.forEach(id=>h+=cellPS(colHave[id],colTot[id],colGen[id],colRes[id]).replace('<td ','<td style="font-weight:800" '));
+ h+=cellPS(gH,gT,gG,gR).replace('<td ','<td class="ttcol" ');h+='</tr>';
+ h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
+
+function renderPlano(){
+ const cont=document.getElementById('plano-setup');const atts=planoAtts();const H=DATA.hosps;
+ let h=renderPlanoSummary();
+ // ---- Tabela de rollout: atendimento × hospital (célula = mês) ----
+ h+='<div class="section-title" style="font-size:15px;margin:6px 0 8px">Meses de rollout por hospital</div>';
+ h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th><th>Grupo</th>';
+ H.forEach(hp=>h+=`<th>${esc(hp)}</th>`);h+='</tr></thead><tbody>';
+ const opts=monthOptions();
+ atts.forEach(a=>{const added=!DATA.geralMatrix[a.id];
+  h+=`<tr><td class="rh">${esc(a.name)}${added?' <span class="oplabel" style="background:#16233f;border-color:#294066;color:#8bb4ff">novo</span>':''}</td><td class="mono-sm">${a.group}</td>`;
+  H.forEach(hp=>{const cur=SHARED.plano.monthsH[a.id+'@@'+hp]||'';
+   h+=`<td><select class="mon-sel" data-mon-att="${esc(a.id)}" data-mon-hosp="${esc(hp)}"><option value="">—</option>${opts.map(m=>`<option ${cur===m?'selected':''}>${m}</option>`).join('')}</select></td>`;});
+  h+='</tr>';});
+ h+='</tbody></table></div>';
+ h+='<div class="toolrow"><button class="btn-primary" id="btn-gerar">Gerar Plano</button><button class="btn-sec" id="btn-refresh">↻ Atualizar</button></div><div id="plano-output"></div>';
  cont.innerHTML=h;
- cont.querySelectorAll('select[data-mon]').forEach(sel=>sel.onchange=()=>{wMonth(sel.dataset.mon,sel.value);});
+ cont.querySelectorAll('select[data-mon-att]').forEach(sel=>sel.onchange=()=>{wMonthH(sel.dataset.monAtt,sel.dataset.monHosp,sel.value);renderPlanoSummary&&0;});
  document.getElementById('btn-gerar').onclick=()=>{UI.planoGen=true;saveUI();renderPlanoOutput();};
  document.getElementById('btn-refresh').onclick=()=>renderPlano();
  cont.querySelectorAll('#psum-mode button').forEach(b=>b.onclick=()=>{UI.planoSumMode=b.dataset.m;saveUI();renderPlano();});
@@ -717,38 +854,39 @@ function renderPlano(){
  if(UI.planoGen)renderPlanoOutput();
 }
 function renderPlanoOutput(){
- const out=document.getElementById('plano-output');const f=UI.planoFilter;const mode=UI.planoMode;const n=DATA.hosps.length;
+ const out=document.getElementById('plano-output');const f=UI.planoFilter;const mode=UI.planoMode;const H=DATA.hosps;const n=H.length;
  let h='<div class="toolrow" style="margin-top:16px"><span class="tglabel">Visualização:</span><div class="toggle" id="plano-mode"><button class="'+(mode==='presenca'?'active':'')+'" data-pm="presenca">Presença</button><button class="'+(mode==='efetividade'?'active':'')+'" data-pm="efetividade">Efetividade</button></div></div>';
  h+='<div class="legend-tier">Filtrar tiers: ';
  TIERS.forEach(t=>h+=`<span class="mchip ${f[t]?'on':''}" data-f="${t}">${t}</span>`);
- h+=(mode==='presenca'?' <span class="hint"><span class="chk-ok">✔</span> hospital já tem · <span class="chk-no">✘</span> a implementar · <b>NA</b> fora do filtro</span>':' <span class="hint">efetividade do escopo no hospital · <b>Sem alertas</b> = tem o escopo mas nada foi gerado · <b>NA</b> = tier fora do filtro</span>')+'</div>';
+ h+=(mode==='presenca'?' <span class="hint"><span class="chk-ok">✔</span> hospital já cobre · <span class="chk-no">✘</span> a implementar · <b>NA</b> fora do escopo/filtro do mês</span>':' <span class="hint">efetividade do escopo no hospital · <b>Nenhum alerta</b> = aplicável mas sem alertas na base · <b>NA</b> = fora do escopo/filtro do mês</span>')+'</div>';
  let any=false;
  monthOptions().forEach(m=>{
-  const atts=planoAtts().filter(a=>SHARED.plano.months[a.id]===m);
-  if(!atts.length)return;let body='';
-  atts.forEach(a=>{
-   const keys=attScopeKeys(a.id);const byCat={};
-   keys.forEach(k=>{const info=scopeInfo(k);(byCat[info.cat]=byCat[info.cat]||[]).push({k,info});});
-   const cats=DATA.cat_order.filter(c=>byCat[c]).concat(Object.keys(byCat).filter(c=>!DATA.cat_order.includes(c)));
-   let attBody='';
-   cats.forEach(cat=>{let catRows='';
-    byCat[cat].forEach(({k,info})=>{let cells='';let anyActive=false;
-     DATA.hosps.forEach(hp=>{const t=hospTierFor(hp,a.id,k);
-      if(t && f[t]){anyActive=true;const has=DATA.hospHas[hp]&&DATA.hospHas[hp][k];
-       if(mode==='efetividade'){const e=has?scopeEff(hp,k):null;
-        cells+= e==null? `<td><span class="noalert" title="tem/deveria ter o escopo, mas sem alertas na base">Sem alertas</span></td>` : `<td><span style="color:${effColor(e)};font-weight:700">${pct(e)}</span></td>`;}
-       else cells+=`<td><span class="tchip ${tierCls(t)}" title="${t}${has?' · já na base':' · a implementar'}">${tierAbbr(t)}</span> ${has?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>'}</td>`;}
-      else if(t)cells+=`<td><span class="tchip t-na" title="classificado como ${t}, fora do filtro">NA</span></td>`;
-      else cells+=`<td><span class="tchip t-na">—</span></td>`;});
-     if(!anyActive)return;
-     catRows+=`<tr><th class="rowh">${esc(info.escopo)}${info.op?`<span class="oplabel">${esc(info.op)}</span>`:''}</th>${cells}</tr>`;});
-    if(!catRows)return;
-    attBody+=`<tr class="subcatrow"><td colspan="${n+1}">${esc(cat)}</td></tr>`+catRows;});
-   if(!attBody)return;
-   body+=`<tr class="catrow"><td colspan="${n+1}">${esc(a.name)} <span class="mono-sm">(${a.share>0?a.share+'% fat.':'novo'})</span></td></tr>`+attBody;});
+  // para cada hospital, escopos "no radar" do mês = união dos escopos aplicáveis aos atendimentos com rollout==m nesse hospital, cujo tier passa no filtro
+  const hospScopeSet={};let monthKeys={};
+  H.forEach(hp=>{hospScopeSet[hp]={};
+   planoAtts().forEach(a=>{if(SHARED.plano.monthsH[a.id+'@@'+hp]!==m)return;
+    applicableScopes(hp,a.id).forEach(s=>{const tabId=hospTabId(hp)||'geral';const vt=escDisplayTier(curEscVal(tabId,s.key));if(!(vt&&f[vt]))return;
+     hospScopeSet[hp][s.key]=true;monthKeys[s.key]=s;});});});
+  const keys=Object.keys(monthKeys);if(!keys.length)return;
+  // agrupa por categoria
+  const byCat={};keys.forEach(k=>{const info=scopeInfo(k);(byCat[info.cat]=byCat[info.cat]||[]).push({k,info});});
+  const cats=DATA.cat_order.filter(c=>byCat[c]).concat(Object.keys(byCat).filter(c=>!DATA.cat_order.includes(c)));
+  let body='';
+  cats.forEach(cat=>{let catRows='';
+   byCat[cat].forEach(({k,info})=>{let cells='';let anyActive=false;
+    H.forEach(hp=>{const active=!!hospScopeSet[hp][k];
+     if(active){anyActive=true;const tabId=hospTabId(hp)||'geral';const t=curEscVal(tabId,k);const has=hospHasScope(hp,k);
+      if(mode==='efetividade'){const st=hospScopeStat(hp,k);const e=st.gen>0?st.res/st.gen:null;
+       cells+= e==null? '<td><span class="noalert" title="aplicável neste mês, sem alertas na base">Nenhum alerta</span></td>' : '<td><span style="color:'+effColor(e)+';font-weight:700">'+pct(e)+'</span></td>';}
+      else cells+='<td><span class="tchip '+tierCls(t)+'" title="'+(t||'—')+(has?' · já na base':' · a implementar')+'">'+tierAbbr(t)+'</span> '+(has?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>')+'</td>';}
+     else cells+='<td><span class="tchip t-na" title="fora do escopo/rollout do mês">NA</span></td>';});
+    if(!anyActive)return;
+    catRows+='<tr><th class="rowh">'+esc(info.escopo)+(info.op?'<span class="oplabel">'+esc(info.op)+'</span>':'')+'</th>'+cells+'</tr>';});
+   if(!catRows)return;
+   body+='<tr class="subcatrow"><td colspan="'+(n+1)+'">'+esc(cat)+'</td></tr>'+catRows;});
   if(!body)return;any=true;
-  h+=`<div class="plano-month">${m}</div><div class="mx-wrap" style="max-height:none;margin-bottom:8px"><table class="mx"><thead><tr><th class="corner rowh">Escopo</th>${DATA.hosps.map(hp=>`<th>${esc(hp)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;});
- if(!any)h+='<div class="empty">Nenhum atendimento priorizado. Defina os meses acima e clique em Gerar Plano.</div>';
+  h+='<div class="plano-month">'+m+'</div><div class="mx-wrap" style="max-height:none;margin-bottom:8px"><table class="mx"><thead><tr><th class="corner rowh">Escopo</th>'+H.map(hp=>'<th>'+esc(hp)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';});
+ if(!any)h+='<div class="empty">Nenhum atendimento priorizado. Defina os meses de rollout acima e clique em Gerar Plano.</div>';
  out.innerHTML=h;
  out.querySelectorAll('.mchip[data-f]').forEach(el=>el.onclick=()=>{UI.planoFilter[el.dataset.f]=!UI.planoFilter[el.dataset.f];saveUI();renderPlanoOutput();});
  out.querySelectorAll('#plano-mode button').forEach(el=>el.onclick=()=>{UI.planoMode=el.dataset.pm;saveUI();renderPlanoOutput();});
@@ -781,7 +919,7 @@ function bootData(){
  }).catch(e=>showFatal('Erro ao ler a base do Firebase: '+((e&&e.message)||e)));
 }
 function initApp(){
- GV=DATA.meta.grandValor;buildMonths();buildScopeStats();buildStats();
+ GV=DATA.meta.grandValor;buildRuleIdx();buildMonths();buildScopeStats();buildStats();
  (function(){const sh=document.getElementById("subhead");if(sh){const n=(DATA.hosps||[]).length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
  (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
    if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
