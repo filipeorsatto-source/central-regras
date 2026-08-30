@@ -157,16 +157,16 @@ header{position:relative}
 /* ==== Drill-down de regras + edição ==== */
 .drill{display:inline-block;color:#6b7a99;cursor:pointer;font-weight:800;font-size:11px;margin-right:6px;transition:transform .15s;transform:rotate(0deg)}
 .drill:hover{color:var(--accent)}.drill.open{transform:rotate(90deg);color:var(--accent2)}
-tr.rd-row>td{background:#0b111d;padding:0;border-bottom:1px solid var(--line);position:relative}
-.rd-box{position:sticky;left:0;width:340px;max-width:340px;padding:10px 12px;box-sizing:border-box}
-.rd-title{font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:8px}
-.rd-empty{font-size:12px;color:var(--muted);line-height:1.4}
-ul.rd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}
-ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--panel2)}
+tr.rd-row>td{background:#0b111d;padding:0;border-bottom:1px solid var(--line)}
+.rd-box{padding:12px 14px;box-sizing:border-box;width:100%}
+.rd-title{font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:10px}
+.rd-empty{font-size:12px;color:var(--muted);line-height:1.4;max-width:520px}
+ul.rd-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:360px;overflow:auto}
+ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2);min-width:0;box-sizing:border-box;overflow:hidden}
 .rd-line{display:flex;align-items:center;gap:8px}
-.rd-line .code{font-family:Consolas,monospace;color:var(--accent2);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rd-desc{font-size:12px;color:var(--txt);margin-top:3px;line-height:1.35}
-.rd-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.rd-line .code{font-family:Consolas,monospace;color:var(--accent2);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rd-desc{font-size:12px;color:var(--txt);margin-top:4px;line-height:1.35;overflow-wrap:break-word;word-break:break-word;white-space:normal}
+.rd-meta{font-size:11px;color:var(--muted);margin-top:4px;overflow-wrap:break-word}
 .rule-edit{cursor:pointer;color:#6b7a99;font-size:13px;flex:none;padding:0 2px}
 .rule-edit:hover{color:var(--accent)}
 .rule-edit.moved{color:var(--accent2)}
@@ -174,6 +174,11 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:7px 9px;bac
 .rule-scope-sel{background:var(--panel2);color:var(--txt);border:1px solid var(--accent);border-radius:7px;padding:4px 6px;font-size:12px;max-width:280px}
 .att-share[data-share-att]{cursor:pointer}
 .att-share[data-share-att]:hover{outline:1px solid var(--accent)}
+.ren{cursor:pointer;color:#6b7a99;font-size:12px;margin-left:8px;flex:none}
+.ren:hover{color:var(--accent)}
+.cx{cursor:pointer;color:#5b6b88;font-size:13px;margin-left:5px;font-weight:800;flex:none}
+.cx:hover{color:var(--red)}
+.ren-input{background:#0b1120;border:1px solid var(--accent);color:var(--txt);border-radius:6px;padding:2px 7px;font-size:14px;font-weight:600;min-width:220px}
 .catrow-edit{display:flex;align-items:center;gap:8px;margin:6px 0}
 .catrow-edit input.cat-ren{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:7px 9px;border-radius:8px;font-size:13px}
 .catrow-edit input.cat-ren:focus{border-color:var(--accent);outline:none}
@@ -344,7 +349,55 @@ function buildTree(container,tree,q,hf){
  container.querySelectorAll('.rule-edit[data-rid]').forEach(p=>p.onclick=e=>{e.stopPropagation();openScopeEditor(p.dataset.rid,p,p.dataset.curkey,globalScopeOptionsHtml(p.dataset.curkey));});
  const ch=document.getElementById('central-hint');if(ch&&container.id==='tree')ch.textContent=`${shownRules} regras · ${shownCat} categorias`;}
 const fhosp=document.getElementById('fhosp');
-function refreshCentral(){buildTree(document.getElementById('tree'),DATA.general,document.getElementById('search').value.trim().toLowerCase(),fhosp.value);}
+// ---- Central de Regras: scaffold editável (mostra escopos/categorias mesmo sem regras) ----
+function centralScaffold(q,hf){const byCat={};
+ allScopes().forEach(s=>{const cat=s.cat;(byCat[cat]=byCat[cat]||{});byCat[cat][s.key]=byCat[cat][s.key]||{info:{key:s.key,cat:cat,escopo:scopeLabel(s.key,s.escopo)},rules:[]};});
+ DATA.rules.forEach(r=>{if(r.op)return;const e=effCatEsc(r);
+  if(hf&&r.hosp!==hf)return;
+  if(q){const t=(r.desc+' '+r.cod+' '+e.escopo+' '+catLabel(e.cat)).toLowerCase();if(t.indexOf(q)<0)return;}
+  const sc=(byCat[e.cat]=byCat[e.cat]||{});const cell=sc[e.key]=sc[e.key]||{info:{key:e.key,cat:e.cat,escopo:e.escopo},rules:[]};cell.rules.push(r);});
+ return byCat;}
+function inlineRename(span,current,onCommit){if(!span)return;const inp=document.createElement('input');inp.type='text';inp.value=current;inp.className='ren-input';
+ span.replaceWith(inp);inp.focus();inp.select();let done=false;
+ const commit=()=>{if(done)return;done=true;const v=inp.value.trim();if(v&&v!==current)onCommit(v);else refreshCentral();};
+ inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){done=true;refreshCentral();}};
+ inp.onblur=()=>setTimeout(commit,100);}
+function buildCentralTree(){const container=document.getElementById('tree');const q=document.getElementById('search').value.trim().toLowerCase();const hf=fhosp.value;const filtering=!!(q||hf);
+ const byCat=centralScaffold(q,hf);
+ const cats=catOrder().slice();Object.keys(byCat).forEach(c=>{if(cats.indexOf(c)<0)cats.push(c);});
+ container.innerHTML='';let shownCat=0,shownRules=0;
+ cats.forEach(cat=>{const scopesObj=byCat[cat]||{};let scopeKeys=Object.keys(scopesObj);
+  if(filtering)scopeKeys=scopeKeys.filter(k=>scopesObj[k].rules.length);
+  scopeKeys.sort((a,b)=>scopesObj[a].info.escopo.localeCompare(scopesObj[b].info.escopo));
+  if(filtering&&!scopeKeys.length)return;
+  shownCat++;const catRules=[];scopeKeys.forEach(k=>catRules.push.apply(catRules,scopesObj[k].rules));shownRules+=catRules.length;
+  const a=agg(catRules);const c=el('div','cat');const isPending=cat===PENDING_CAT;
+  const editCat=filtering?'':`<span class="ren" data-rencat="${esc(cat)}" title="renomear categoria">✎</span>`;
+  const delCat=(filtering||isPending)?'':`<span class="cx" data-delcat="${esc(cat)}" title="excluir categoria">✕</span>`;
+  c.innerHTML=`<div class="head"><span class="arrow">▶</span><span class="tag" data-catname="${esc(cat)}">${esc(catLabel(cat))}</span>${editCat}${delCat}
+    <span class="badges"><span class="count">${scopeKeys.length} escopos · ${catRules.length} regras</span>${wpill(a.weight)}${epill(a.gen,a.res)}</span></div>`;
+  const holder=el('div','scopes');
+  scopeKeys.forEach(k=>{const cell=scopesObj[k];const rules=cell.rules;const sa=agg(rules);const sc=el('div','scope');
+   const editSc=filtering?'':`<span class="ren" data-renscope="${esc(k).replace(/"/g,'&quot;')}" title="renomear escopo">✎</span>`;
+   const delSc=filtering?'':`<span class="cx" data-delscope="${esc(k).replace(/"/g,'&quot;')}" title="excluir escopo">✕</span>`;
+   sc.innerHTML=`<div class="head"><span class="arrow">▶</span><span class="sname" data-scname="${esc(k).replace(/"/g,'&quot;')}">${esc(cell.info.escopo)}</span>${editSc}${delSc}
+     <span class="badges"><span class="count">${rules.length} regras</span>${wpill(sa.weight)}${epill(sa.gen,sa.res)}</span></div>
+     <div class="rules">${rules.length?`<table class="rules-tbl"><thead><tr><th>Código</th><th>Descrição</th><th>Hospital</th><th class="num">Peso</th><th class="num">Efet.</th><th class="num">Alertas</th><th></th></tr></thead><tbody>${rules.map(ruleRow).join('')}</tbody></table>`:'<div class="mono-sm" style="padding:8px 10px">Escopo sem regras — traga regras para cá pelo lápis (✎) das regras em outros escopos.</div>'}</div>`;
+   sc.querySelector('.head').onclick=e=>{if(e.target.closest('.ren')||e.target.closest('.cx'))return;sc.classList.toggle('open');};
+   holder.appendChild(sc);});
+  if(!scopeKeys.length){const em=el('div','mono-sm');em.style.padding='8px 12px';em.textContent='Categoria sem escopos.';holder.appendChild(em);}
+  c.appendChild(holder);
+  c.querySelector('.head').onclick=e=>{if(e.target.closest('.ren')||e.target.closest('.cx'))return;c.classList.toggle('open');};
+  if(q){c.classList.add('open');holder.querySelectorAll('.scope').forEach(s=>s.classList.add('open'));}
+  container.appendChild(c);});
+ if(!shownCat)container.innerHTML='<div class="empty">Nenhuma regra ou escopo encontrado.</div>';
+ container.querySelectorAll('.rule-edit[data-rid]').forEach(p=>p.onclick=e=>{e.stopPropagation();openScopeEditor(p.dataset.rid,p,p.dataset.curkey,globalScopeOptionsHtml(p.dataset.curkey));});
+ container.querySelectorAll('.ren[data-rencat]').forEach(b=>b.onclick=e=>{e.stopPropagation();const raw=b.dataset.rencat;inlineRename(container.querySelector('.tag[data-catname="'+CSS.escape(raw)+'"]'),catLabel(raw),v=>wRenameCat(raw,v));});
+ container.querySelectorAll('.ren[data-renscope]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.renscope;inlineRename(container.querySelector('.sname[data-scname="'+CSS.escape(key)+'"]'),scopeInfo(key).escopo,v=>wRenameScope(key,v));});
+ container.querySelectorAll('.cx[data-delcat]').forEach(x=>x.onclick=e=>{e.stopPropagation();const cat=x.dataset.delcat;if(confirm('Excluir a categoria "'+catLabel(cat)+'"? As regras dela irão para "'+PENDING_CAT+'".'))wDeleteCat(cat);});
+ container.querySelectorAll('.cx[data-delscope]').forEach(x=>x.onclick=e=>{e.stopPropagation();const key=x.dataset.delscope;if(confirm('Excluir o escopo "'+scopeInfo(key).escopo+'"? As regras dele irão para "'+PENDING_CAT+'".'))wDeleteScope(key);});
+ document.getElementById('central-hint').textContent=`${shownRules} regras · ${shownCat} categorias`;}
+function refreshCentral(){buildCentralTree();}
 document.getElementById('search').oninput=refreshCentral;fhosp.onchange=refreshCentral;
 document.getElementById('btn-add-gscope').onclick=()=>openAddScopeGlobal();
 document.getElementById('btn-cats').onclick=()=>openCatManager();
@@ -505,7 +558,8 @@ function monthOptions(){
  const ini=MES_ABREV.indexOf(MONTHS[0]);
  antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
  return antes.concat(set);}
-function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},ruleMap:{},addScopes:[],addCats:[],catRename:{},tabs:{},plano:{monthsH:{}}};}
+function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},ruleMap:{},addScopes:[],addCats:[],catRename:{},scopeRename:{},delScopes:{},delCats:{},tabs:{},plano:{monthsH:{}}};}
+const PENDING_CAT='Pendente Agrupamento';
 let SHARED=emptyShared();
 function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true}};
  try{const s=JSON.parse(localStorage.getItem('rivio_ui_v1'));if(s)Object.assign(d,s);}catch(e){}
@@ -552,6 +606,9 @@ function startSync(){
   DB.ref('geral/addScopes').on('value',s=>{SHARED.addScopes=listVals(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('geral/addCats').on('value',s=>{SHARED.addCats=listVals(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('geral/catRename').on('value',s=>{SHARED.catRename=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
+  DB.ref('geral/scopeRename').on('value',s=>{SHARED.scopeRename=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
+  DB.ref('geral/delScopes').on('value',s=>{SHARED.delScopes=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
+  DB.ref('geral/delCats').on('value',s=>{SHARED.delCats=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('.info/connected').on('value',s=>{CONN=!!s.val();const e=document.getElementById('fb-status');if(e)e.innerHTML=fbBadge();});
  }else{loadSharedLocal();}
 }
@@ -602,14 +659,17 @@ function buildRuleIdx(){RULES_BY_HOSP={};RULEBYID={};DATA.rules.forEach(r=>{r._r
 function hospTabId(H){return tabsOrder().find(id=>SHARED.tabs[id].client===H)||null;}
 let AGGCACHE={};
 // ---- taxonomia global editável: categorias (ordem/renome/novas) e escopos globais ----
-function catOrder(){const extra=(SHARED.addCats||[]).filter(c=>c&&DATA.cat_order.indexOf(c)<0);return DATA.cat_order.concat(extra);}
+function catOrder(){const del=SHARED.delCats||{};const base=DATA.cat_order.filter(c=>!del[c]);const extra=(SHARED.addCats||[]).filter(c=>c&&DATA.cat_order.indexOf(c)<0&&!del[c]);return base.concat(extra);}
 function catLabel(c){return (SHARED.catRename&&SHARED.catRename[c])||c;}
-function allScopes(){return DATA.scopeCatalog.concat(SHARED.addScopes||[]);}
+function scopeLabel(key,raw){return (SHARED.scopeRename&&SHARED.scopeRename[key])||raw;}
+function allScopes(){const del=SHARED.delScopes||{};return DATA.scopeCatalog.concat(SHARED.addScopes||[]).filter(s=>!del[s.key]);}
 // escopo efetivo de uma regra (aplica override global de ruleMap)
 function effKeyR(r){return (SHARED.ruleMap&&SHARED.ruleMap[r._rid])||(r.cat+'||'+r.escopo);}
-function effCatEsc(r){const k=effKeyR(r);const p=String(k).split('||');
- if(p.length>=4&&(p[0]==='custom'||p[0]==='gscope'))return{cat:p[1]||'—',escopo:p[2]||k,op:p[3]||'',key:k};
- return{cat:p[0]||'—',escopo:p.slice(1).join('||')||k,op:'',key:k};}
+function parseCatEsc(k){const p=String(k).split('||');
+ if(p[0]==='pending')return{cat:PENDING_CAT,escopo:p.slice(1).join('||')||k,op:''};
+ if(p.length>=4&&(p[0]==='custom'||p[0]==='gscope'))return{cat:p[1]||'—',escopo:p[2]||k,op:p[3]||''};
+ return{cat:p[0]||'—',escopo:p.slice(1).join('||')||k,op:''};}
+function effCatEsc(r){const k=effKeyR(r);const b=parseCatEsc(k);return{cat:b.cat,escopo:scopeLabel(k,b.escopo),op:b.op,key:k};}
 // bucket de regras por escopo efetivo para um hospital
 function hospAgg(H){if(AGGCACHE[H])return AGGCACHE[H];
  const rules=RULES_BY_HOSP[H]||[];const agg={};
@@ -642,7 +702,7 @@ function rerenderVisible(){const vis=id=>{const e=document.getElementById('tab-'
 function globalScopeOptionsHtml(curKey){const byCat={};allScopes().forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
  const cats=catOrder().filter(c=>byCat[c]).concat(Object.keys(byCat).filter(c=>catOrder().indexOf(c)<0));
  let h='',has=false;
- cats.forEach(cat=>{h+='<optgroup label="'+esc(catLabel(cat))+'">';byCat[cat].slice().sort((a,b)=>a.escopo.localeCompare(b.escopo)).forEach(s=>{if(s.key===curKey)has=true;h+='<option value="'+esc(s.key).replace(/"/g,'&quot;')+'"'+(s.key===curKey?' selected':'')+'>'+esc(s.escopo)+'</option>';});h+='</optgroup>';});
+ cats.forEach(cat=>{h+='<optgroup label="'+esc(catLabel(cat))+'">';byCat[cat].map(s=>({s,lbl:scopeLabel(s.key,s.escopo)})).sort((a,b)=>a.lbl.localeCompare(b.lbl)).forEach(({s,lbl})=>{if(s.key===curKey)has=true;h+='<option value="'+esc(s.key).replace(/"/g,'&quot;')+'"'+(s.key===curKey?' selected':'')+'>'+esc(lbl)+'</option>';});h+='</optgroup>';});
  if(!has&&curKey){const info=scopeInfo(curKey);h='<optgroup label="'+esc(catLabel(info.cat))+' (atual)"><option value="'+esc(curKey).replace(/"/g,'&quot;')+'" selected>'+esc(info.escopo)+'</option></optgroup>'+h;}
  return h;}
 // editor inline: troca o lápis por uma lista suspensa; grava no change, cancela no blur/Esc
@@ -667,6 +727,28 @@ function wRenameCat(raw,label){SHARED.catRename=SHARED.catRename||{};const store
  if(store)SHARED.catRename[raw]=store;else delete SHARED.catRename[raw];
  rebuildDerived();
  if(HAVE_FB)DB.ref('geral/catRename/'+encK(raw)).set(store).catch(fbErr);else persistSharedLocal();rerenderVisible();}
+// renome de escopo (rótulo global por chave)
+function wRenameScope(key,label){SHARED.scopeRename=SHARED.scopeRename||{};const raw=parseCatEsc(key).escopo;const store=(label&&label!==raw)?label:null;
+ if(store)SHARED.scopeRename[key]=store;else delete SHARED.scopeRename[key];
+ rebuildDerived();
+ if(HAVE_FB)DB.ref('geral/scopeRename/'+encK(key)).set(store).catch(fbErr);else persistSharedLocal();rerenderVisible();}
+// exclui escopo GLOBAL: regras associadas vão para a categoria "Pendente Agrupamento"
+function wDeleteScope(key){SHARED.delScopes=SHARED.delScopes||{};SHARED.ruleMap=SHARED.ruleMap||{};
+ const escLbl=scopeInfo(key).escopo;const pend='pending||'+escLbl;const rmUpd={};
+ DATA.rules.forEach(r=>{if(effKeyR(r)===key){SHARED.ruleMap[r._rid]=pend;rmUpd[encK(r._rid)]=pend;}});
+ SHARED.delScopes[key]=true;
+ rebuildDerived();
+ if(HAVE_FB){DB.ref('geral/delScopes/'+encK(key)).set(true).catch(fbErr);if(Object.keys(rmUpd).length)DB.ref('geral/ruleMap').update(rmUpd).catch(fbErr);}else persistSharedLocal();
+ rerenderVisible();}
+// exclui categoria GLOBAL: todos os escopos/regras dela vão para "Pendente Agrupamento"
+function wDeleteCat(cat){if(cat===PENDING_CAT)return;SHARED.delCats=SHARED.delCats||{};SHARED.delScopes=SHARED.delScopes||{};SHARED.ruleMap=SHARED.ruleMap||{};
+ const rmUpd={},dsUpd={};
+ DATA.rules.forEach(r=>{const e=effCatEsc(r);if(e.cat===cat){const pend='pending||'+e.escopo;SHARED.ruleMap[r._rid]=pend;rmUpd[encK(r._rid)]=pend;}});
+ allScopes().filter(s=>s.cat===cat).forEach(s=>{SHARED.delScopes[s.key]=true;dsUpd[encK(s.key)]=true;});
+ SHARED.delCats[cat]=true;
+ rebuildDerived();
+ if(HAVE_FB){DB.ref('geral/delCats/'+encK(cat)).set(true).catch(fbErr);if(Object.keys(rmUpd).length)DB.ref('geral/ruleMap').update(rmUpd).catch(fbErr);if(Object.keys(dsUpd).length)DB.ref('geral/delScopes').update(dsUpd).catch(fbErr);}else persistSharedLocal();
+ rerenderVisible();}
 
 // ---- helpers de exibição ----
 function tierCls(t){return t==='Essencial'?'t-ess':t==='Avançado'?'t-adv':t==='Completo'?'t-comp':'t-na';}
@@ -725,8 +807,8 @@ function openClientModal(){const opts=DATA.clients.map(c=>`<option value="${esc(
 
 // lista plana de escopos de uma aba (catálogo - delS + addS), respeitando cat_order
 function tabScopeList(tabId){const c=tabId==='geral'?null:SHARED.tabs[tabId];
- let list=allScopes().map(s=>({key:s.key,cat:s.cat,escopo:s.escopo,op:s.op||''})).filter(s=>!(c&&c.delS&&c.delS[s.key]));
- if(c&&c.addS)c.addS.forEach(s=>{if(!(c.delS&&c.delS[s.key]))list.push({key:s.key,cat:s.cat,escopo:s.escopo,op:s.op||''});});
+ let list=allScopes().map(s=>({key:s.key,cat:s.cat,escopo:scopeLabel(s.key,s.escopo),op:s.op||''})).filter(s=>!(c&&c.delS&&c.delS[s.key]));
+ if(c&&c.addS)c.addS.forEach(s=>{if(!(c.delS&&c.delS[s.key]))list.push({key:s.key,cat:s.cat,escopo:scopeLabel(s.key,s.escopo),op:s.op||''});});
  return list;}
 function viewScopes(id){const list=tabScopeList(id);
  const byCat={};list.forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
@@ -880,9 +962,9 @@ function openAddAtt(id){showModal(`<h3>Adicionar tipo de atendimento</h3><label>
 
 // ======================= PLANO DE VIRADA =======================
 function buildScopeStats(){/* mantido por compatibilidade — stats agora vêm de hospAgg */}
-function scopeInfo(key){let s=allScopes().find(x=>x.key===key);if(s)return s;
- for(const id in SHARED.tabs){const f=(SHARED.tabs[id].addS||[]).find(x=>x.key===key);if(f)return f;}
- const p=String(key).split('||');return {key,cat:p.length>2?p[1]:(p[0]||'—'),escopo:p[p.length-1]||key};}
+function scopeInfo(key){let s=allScopes().find(x=>x.key===key);if(s)return {key,cat:s.cat,escopo:scopeLabel(key,s.escopo),op:s.op||''};
+ for(const id in SHARED.tabs){const f=(SHARED.tabs[id].addS||[]).find(x=>x.key===key);if(f)return {key,cat:f.cat,escopo:scopeLabel(key,f.escopo),op:f.op||''};}
+ const b=parseCatEsc(key);return {key,cat:b.cat,escopo:scopeLabel(key,b.escopo),op:b.op};}
 function planoAtts(){const list=DATA.attendance.slice();const seen={};list.forEach(a=>seen[a.id]=1);
  tabsOrder().forEach(id=>(SHARED.tabs[id].addA||[]).forEach(a=>{if(!seen[a.id]){seen[a.id]=1;list.push(a);}}));return list;}
 // escopos aplicáveis a um atendimento, no contexto de um hospital (aba do hospital ou geral)
