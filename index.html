@@ -69,6 +69,46 @@ table.rules-tbl tr:last-child td{border-bottom:none}
 .section-title{font-size:16px;font-weight:700;margin:8px 0 12px}
 .muted{color:var(--muted)}.pill{display:inline-block;background:var(--chip);color:var(--muted);padding:2px 9px;border-radius:20px;font-size:11px;margin-left:8px}
 .empty{color:var(--muted);padding:30px;text-align:center}
+/* ---- aba Acompanhamento ---- */
+.ac-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:4px 0 20px}
+.ac-kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.ac-kpi b{display:block;font-size:26px;font-weight:700;color:var(--txt);line-height:1.15;margin:2px 0}
+.ac-kl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+.ac-kh{display:block;color:var(--muted);font-size:11px;margin-top:6px;line-height:1.35}
+.ac-d{font-style:normal;font-size:12px;font-weight:700}
+.ac-d.up{color:var(--green)}.ac-d.down{color:var(--amber)}
+.ac-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px 14px;margin-bottom:18px}
+.ac-h{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.ac-n{flex:0 0 26px;height:26px;border-radius:8px;background:var(--chip);color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ac-t{font-size:15px;font-weight:700}
+.ac-s{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4}
+.ac-note{color:#6f7c99}
+.ac-svg{display:block;width:100%;height:auto;overflow:visible}
+.ac-leg{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px}
+.ac-leg span{display:flex;align-items:center;gap:6px}
+.ac-leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.ac-leg i.ln{width:16px;height:2px;border-radius:2px}
+.ac-leg i.ln.dsh{background-image:linear-gradient(90deg,currentColor 0 60%,transparent 60% 100%)}
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.ac-sm{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.ac-smh{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.ac-tbl .dot{margin-right:6px}
+.ac-smh .nm{font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-smh b{font-size:15px;font-weight:700}
+.ac-smf{color:var(--muted);font-size:11px;margin-top:2px}
+.ac-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.ac-tbl th{text-align:left;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600}
+.ac-tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.ac-tbl tr:last-child td{border-bottom:none}
+.ac-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.ac-rd{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;max-width:520px}
+.ac-rd2{color:var(--muted);font-size:11px}
+.ac-gain{color:var(--green);font-weight:700}
+.ac-det{margin:6px 0 18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 18px}
+.ac-det summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:14px 0}
+.ac-det[open] summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+.ac-det table{margin-bottom:16px}
+.ac-tip{position:fixed;z-index:60;display:none;background:#0b101c;border:1px solid var(--line);color:var(--txt);font-size:12px;padding:7px 10px;border-radius:8px;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:280px;line-height:1.4}
 .big-wrap{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:12px}
 .big-table{border:none;border-radius:0}
 .big-table th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:10px;text-align:left;cursor:pointer;white-space:nowrap;border-bottom:1px solid var(--line);z-index:1}
@@ -207,6 +247,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
   <button data-tab="todas">Todas as Regras</button>
   <button data-tab="escopos">Análise Escopos</button>
   <button data-tab="plano">Plano de Virada</button>
+  <button data-tab="acomp">Acompanhamento</button>
  </nav>
  <main>
   <section id="tab-central">
@@ -275,6 +316,12 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
    <p class="muted" style="margin-bottom:12px">Defina em que mês cada tipo de atendimento entra no rollout e gere o plano de escopos por hospital.</p>
    <div id="plano-setup"></div>
   </section>
+
+  <section id="tab-acomp" style="display:none">
+   <div class="section-title">Acompanhamento — evolução de regras e efetividade</div>
+   <p class="muted" style="margin-bottom:14px">Série de Maio/26 em diante. Efetividade sempre consolidada (alertas resolvidos ÷ gerados), a mesma conta do cabeçalho do app.</p>
+   <div id="acomp-view"></div>
+  </section>
  </main>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -282,7 +329,8 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
 let DATA=null;
-const HOSP_COLORS={'Einstein':'#4f8cff','HAOC':'#a78bfa','HCOR':'#f472b6','Sírio BSB':'#2dd4bf','Sírio SP':'#fbbf24','AC Camargo':'#a3e635','Einstein GO':'#22d3ee','POC':'#f97316'};
+// paleta validada para o fundo escuro (faixa de luminancia, piso de croma, separacao CVD e contraste)
+const HOSP_COLORS={'Einstein':'#3987e5','HAOC':'#9085e9','HCOR':'#d55181','Sírio BSB':'#199e70','Sírio SP':'#c98500','AC Camargo':'#008300','Einstein GO':'#d95926','POC':'#e66767'};
 const HOSP_FALLBACK=['#38bdf8','#c084fc','#fb7185','#34d399','#facc15','#84cc16','#f97316','#e879f9','#22d3ee','#fb923c'];
 // hospitais exibidos nas análises (exclui entidades não-hospitalares, ex.: POC)
 function nonHospMap(){const l=(typeof DATA!=='undefined'&&DATA&&DATA.nonHosp)?DATA.nonHosp:['POC'];const o={};l.forEach(h=>o[h]=1);return o;}
@@ -597,9 +645,10 @@ let CONN=false;
 function fbBadge(){if(!HAVE_FB)return '<span class="fbdot off"></span> Offline (local)';return CONN?'<span class="fbdot on"></span> Live':'<span class="fbdot off"></span> Conectando…';}
 function renderActive(){
  AGGCACHE={};
- const te=document.getElementById('tab-escopos'),tp=document.getElementById('tab-plano');
+ const te=document.getElementById('tab-escopos'),tp=document.getElementById('tab-plano'),ta=document.getElementById('tab-acomp');
  if(te&&te.style.display!=='none')renderEscopos();
- if(tp&&tp.style.display!=='none')renderPlano();}
+ if(tp&&tp.style.display!=='none')renderPlano();
+ if(ta&&ta.style.display!=='none')renderAcomp();}
 function fbReadErr(e){const el=document.getElementById('fb-status');if(el)el.innerHTML='<span class="fbdot off"></span> Sem permissão de leitura — ajuste as Regras do Firebase';console.warn('FB read:',(e&&e.message)||e);}
 function startSync(){
  if(HAVE_FB){
@@ -1122,9 +1171,268 @@ function initApp(){
 }
 initAuth();
 
+// ===================== ABA ACOMPANHAMENTO =====================
+// Paleta de hospitais validada para o fundo escuro (ver HOSP_COLORS).
+// Ordem do stack escolhida para passar as checagens de separacao (CVD + visao normal).
+const AC_STACK=['Einstein','Sírio SP','Sírio BSB','Einstein GO','HAOC','HCOR','AC Camargo'];
+const AC_INK='#e6ebf5', AC_MUT='#93a1bd', AC_GRID='#283350', AC_BLUE='#3987e5', AC_DIM='#22304d';
+const AC_FUT=['Set','Out','Nov','Dez'];
+
+function acNum(n){return (n||0).toLocaleString('pt-BR');}
+function acPct(v,d){return (v==null||isNaN(v))?'—':(v*100).toFixed(d==null?1:d).replace('.',',')+'%';}
+function acTip(t){return ' data-tip="'+esc(t).replace(/"/g,'&quot;')+'"';}
+function acCard(n,title,sub,body){
+ return '<div class="ac-card"><div class="ac-h"><span class="ac-n">'+n+'</span><div><div class="ac-t">'+esc(title)+'</div>'
+  +(sub?'<div class="ac-s">'+sub+'</div>':'')+'</div></div>'+body+'</div>';}
+// eixo y: ticks "redondos"
+function acTicks(max,n){const step=Math.ceil(max/n/10)*10||1;const out=[];for(let v=0;v<=step*n;v+=step)out.push(v);return out;}
+
+// ---------- KPIs ----------
+function acKpis(A){
+ const ms=A.meses, i=ms.findIndex(m=>m.m===A.ref), cur=ms[i], prv=ms[i-1];
+ const ef=cur.r/cur.a, efp=prv?prv.r/prv.a:null;
+ const pen=acPenNow(), penMeta=acPenMetaTot();
+ const d=(a,b,suf)=>{if(b==null)return '';const dd=a-b;const cls=dd>=0?'up':'down';
+  return '<i class="ac-d '+cls+'">'+(dd>=0?'▲':'▼')+' '+Math.abs(dd).toFixed(suf==='pp'?1:0).replace('.',',')+(suf||'')+'</i>';};
+ const tiles=[
+  ['Regras ativas',acNum(cur.n),d(cur.n,prv?prv.n:null,''),'regras com ao menos 1 alerta em '+A.refL],
+  ['Efetividade',acPct(ef),d(ef*100,efp!=null?efp*100:null,'pp'),'alertas resolvidos ÷ gerados em '+A.refL],
+  ['Alertas gerados',acNum(cur.a),d(cur.a,prv?prv.a:null,''),acNum(cur.r)+' resolvidos em '+A.refL],
+  ['Penetração hoje',acPct(pen/100),'<i class="ac-d '+(pen>=penMeta?'up':'down')+'">meta '+acPct(penMeta/100,1)+'</i>','cobertura média de escopos vs meta do mês']
+ ];
+ return '<div class="ac-kpis">'+tiles.map(t=>'<div class="ac-kpi"><span class="ac-kl">'+t[0]+'</span><b>'+t[1]+'</b>'
+  +t[2]+'<span class="ac-kh">'+esc(t[3])+'</span></div>').join('')+'</div>';}
+
+// penetracao = cobertura de escopos (mesma conta da aba Cobertura), media simples dos clientes
+function acPenHosp(){const o={};hospsView().forEach(h=>{let num=0,den=0;
+  DATA.coverage.categories.forEach(c=>{const s=c.hosp[h];const tot=c.scopes.length;num+=tot-s.missing.length;den+=tot;});
+  o[h]=den?100*num/den:0;});return o;}
+function acPenNow(){const p=acPenHosp();const v=Object.values(p);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function acPenMetaIdx(){const A=DATA.acomp;const i=A.metaPenM.indexOf(acMesCorrente());return i<0?A.metaPenM.length-1:i;}
+function acMesCorrente(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0');}
+function acPenMetaTot(){const A=DATA.acomp;return A.metaPenTot[acPenMetaIdx()];}
+
+// ---------- 1. regras ativas por mes (barras empilhadas) ----------
+function acChartAtivas(A){
+ const W=1200,H=330,L=64,R=16,T=14,B=46,ms=A.meses;
+ const totals=ms.map(m=>m.n), max=Math.max.apply(null,totals);
+ const tk=acTicks(max,4), top=tk[tk.length-1];
+ const y=v=>T+(H-T-B)*(1-v/top), bw=Math.min(84,(W-L-R)/ms.length*0.52);
+ let g='',bars='';
+ tk.forEach(v=>{g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+AC_GRID+'" stroke-width="1"/>'
+  +'<text x="'+(L-10)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="'+AC_MUT+'" font-size="12">'+acNum(v)+'</text>';});
+ ms.forEach((m,i)=>{const cx=L+(W-L-R)*((i+0.5)/ms.length), x=cx-bw/2;
+  let acc=0;
+  AC_STACK.forEach(h=>{const v=(A.hosp[h]&&A.hosp[h][i]?A.hosp[h][i][2]:0);if(!v)return;
+   const y0=y(acc), y1=y(acc+v), hh=Math.max(1,y0-y1-2);
+   bars+='<rect x="'+x+'" y="'+y1+'" width="'+bw+'" height="'+hh+'" rx="2" fill="'+hospColor(h)+'"'
+    +acTip(h+' · '+m.l+': '+acNum(v)+' regras ativas')+'/>';
+   acc+=v;});
+  bars+='<text x="'+cx+'" y="'+(y(acc)-9)+'" text-anchor="middle" fill="'+AC_INK+'" font-size="13" font-weight="700">'+acNum(m.n)+(m.p?'*':'')+'</text>';
+  bars+='<text x="'+cx+'" y="'+(H-B+22)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+m.l+(m.p?'*':'')+'</text>';});
+ return '<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+g+bars
+  +'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="#383f57" stroke-width="1"/></svg>'
+  +acLegend(AC_STACK);}
+function acDash(c){return '<svg width="18" height="6" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="'+c+'" stroke-width="2" stroke-dasharray="5 4"/></svg>';}
+function acSolid(c){return '<svg width="18" height="6" style="vertical-align:middle"><line x1="0" y1="3" x2="18" y2="3" stroke="'+c+'" stroke-width="2"/></svg>';}
+function acLegend(list){return '<div class="ac-leg">'+list.map(h=>'<span><i style="background:'+hospColor(h)+'"></i>'+esc(h)+'</span>').join('')+'</div>';}
+
+// ---------- 2. efetividade consolidada por mes + meta ----------
+function acChartEfet(A){
+ const W=1200,H=340,L=52,R=110,T=18,B=46;
+ const labs=A.meses.map(m=>m.l).concat(AC_FUT.filter(f=>!A.meses.some(m=>m.l===f)));
+ const n=labs.length, x=i=>L+(W-L-R)*(n===1?0:i/(n-1));
+ const top=80, y=v=>T+(H-T-B)*(1-v/top);
+ let g='';
+ for(let v=0;v<=top;v+=20)g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+AC_GRID+'" stroke-width="1"/>'
+  +'<text x="'+(L-10)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="'+AC_MUT+'" font-size="12">'+v+'%</text>';
+ // realizado
+ const pts=A.meses.map((m,i)=>({i:i,v:100*m.r/m.a,p:m.p,l:m.l,a:m.a,r:m.r}));
+ const solid=pts.filter(p=>!p.p);
+ let path=solid.map((p,k)=>(k?'L':'M')+x(p.i)+' '+y(p.v)).join(' ');
+ let dash='';const last=solid[solid.length-1], par=pts.find(p=>p.p);
+ if(par)dash='<path d="M'+x(last.i)+' '+y(last.v)+'L'+x(par.i)+' '+y(par.v)+'" fill="none" stroke="'+AC_INK+'" stroke-width="2" stroke-dasharray="3 4" opacity=".55"/>';
+ let mk='';
+ pts.forEach(p=>{mk+='<circle cx="'+x(p.i)+'" cy="'+y(p.v)+'" r="'+(p.p?4:5)+'" fill="'+(p.p?'#0f1420':AC_INK)+'" stroke="'+AC_INK+'" stroke-width="2"/>'
+  +'<circle cx="'+x(p.i)+'" cy="'+y(p.v)+'" r="14" fill="transparent"'+acTip(p.l+(p.p?' (parcial)':'')+': '+acPct(p.v/100)+' · '+acNum(p.r)+' de '+acNum(p.a))+'/>';});
+ mk+='<text x="'+x(last.i)+'" y="'+(y(last.v)-14)+'" text-anchor="middle" fill="'+AC_INK+'" font-size="14" font-weight="700">'+acPct(last.v/100)+'</text>';
+ // meta (total do budget)
+ const mi=labs.indexOf('Set');
+ let mp='';A.metaEfTot.forEach((v,k)=>{const idx=mi+k;mp+=(k?'L':'M')+x(idx)+' '+y(v);});
+ let mm='';A.metaEfTot.forEach((v,k)=>{const idx=mi+k;
+  mm+='<circle cx="'+x(idx)+'" cy="'+y(v)+'" r="3.5" fill="'+AC_MUT+'"/>'
+   +'<circle cx="'+x(idx)+'" cy="'+y(v)+'" r="14" fill="transparent"'+acTip('Meta '+labs[idx]+': '+v.toFixed(1).replace('.',',')+'%')+'/>';});
+ const lastMeta=A.metaEfTot[A.metaEfTot.length-1];
+ let ax='';labs.forEach((l,i)=>{const fut=i>=mi&&!A.meses.some(m=>m.l===l);
+  ax+='<text x="'+x(i)+'" y="'+(H-B+22)+'" text-anchor="middle" fill="'+(fut?'#6f7c99':AC_MUT)+'" font-size="12">'+l+'</text>';});
+ return '<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+g
+  +'<path d="'+mp+'" fill="none" stroke="'+AC_MUT+'" stroke-width="2" stroke-dasharray="6 5"/>'+mm
+  +'<text x="'+(x(mi+3)+12)+'" y="'+(y(lastMeta)+4)+'" fill="'+AC_MUT+'" font-size="12">meta '+lastMeta.toFixed(1).replace('.',',')+'%</text>'
+  +'<path d="'+path+'" fill="none" stroke="'+AC_INK+'" stroke-width="2"/>'+dash+mk+ax
+  +'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="#383f57" stroke-width="1"/></svg>'
+  +'<div class="ac-leg"><span>'+acSolid(AC_INK)+'Efetividade realizada</span>'
+  +'<span>'+acDash(AC_MUT)+'Meta (Gestão de Metas)</span></div>';}
+
+// ---------- 3. gerados vs resolvidos ----------
+function acChartVol(A){
+ const W=1200,H=320,L=74,R=16,T=14,B=46,ms=A.meses;
+ const max=Math.max.apply(null,ms.map(m=>m.a));
+ const tk=acTicks(max/1000,4).map(v=>v*1000), top=tk[tk.length-1];
+ const y=v=>T+(H-T-B)*(1-v/top), bw=Math.min(84,(W-L-R)/ms.length*0.52);
+ let g='',bars='';
+ tk.forEach(v=>{g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+AC_GRID+'" stroke-width="1"/>'
+  +'<text x="'+(L-10)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="'+AC_MUT+'" font-size="12">'+(v?acNum(v/1000)+'k':'0')+'</text>';});
+ ms.forEach((m,i)=>{const cx=L+(W-L-R)*((i+0.5)/ms.length), x=cx-bw/2, nr=m.a-m.r;
+  const yR=y(m.r), yN=y(m.a);
+  bars+='<rect x="'+x+'" y="'+yN+'" width="'+bw+'" height="'+Math.max(1,y(m.r)-yN-2)+'" rx="2" fill="'+AC_DIM+'"'
+    +acTip(m.l+': '+acNum(nr)+' não resolvidos')+'/>';
+  bars+='<rect x="'+x+'" y="'+yR+'" width="'+bw+'" height="'+Math.max(1,y(0)-yR)+'" rx="2" fill="'+AC_BLUE+'"'
+    +acTip(m.l+': '+acNum(m.r)+' resolvidos de '+acNum(m.a)+' ('+acPct(m.r/m.a)+')')+'/>';
+  bars+='<text x="'+cx+'" y="'+(yN-9)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+acNum(Math.round(m.a/1000))+'k</text>';
+  bars+='<text x="'+cx+'" y="'+(H-B+22)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+m.l+(m.p?'*':'')+'</text>';});
+ return '<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+g+bars
+  +'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="#383f57" stroke-width="1"/></svg>'
+  +'<div class="ac-leg"><span><i style="background:'+AC_BLUE+'"></i>Resolvidos</span><span><i style="background:'+AC_DIM+'"></i>Não resolvidos</span></div>';}
+
+// ---------- 4. efetividade por hospital (grade) ----------
+function acGrid(A){
+ const labs=A.meses.map(m=>m.l).concat(AC_FUT.filter(f=>!A.meses.some(m=>m.l===f)));
+ const mi=labs.indexOf('Set'), n=labs.length;
+ let h='<div class="ac-grid">';
+ hospsView().forEach(hp=>{
+  const row=A.hosp[hp]||[], meta=A.metaEf[hp];
+  const pts=A.meses.map((m,i)=>({i:i,g:row[i]?row[i][0]:0,r:row[i]?row[i][1]:0,p:m.p,l:m.l}))
+   .filter(p=>p.g>0).map(p=>Object.assign(p,{v:100*p.r/p.g}));
+  const W=340,H=132,L=30,R=30,T=12,B=22, y=v=>T+(H-T-B)*(1-v/100), x=i=>L+(W-L-R)*(n===1?0:i/(n-1));
+  let g='';[0,50,100].forEach(v=>g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="'+AC_GRID+'" stroke-width="1"/>');
+  let body='',lastTxt='—',sub='';
+  if(pts.length){
+   const solid=pts.filter(p=>!p.p), par=pts.find(p=>p.p);
+   const p1=solid.length?solid:pts;
+   body+='<path d="'+p1.map((p,k)=>(k?'L':'M')+x(p.i)+' '+y(p.v)).join(' ')+'" fill="none" stroke="'+AC_INK+'" stroke-width="2"/>';
+   if(par&&solid.length)body+='<path d="M'+x(solid[solid.length-1].i)+' '+y(solid[solid.length-1].v)+'L'+x(par.i)+' '+y(par.v)+'" fill="none" stroke="'+AC_INK+'" stroke-width="2" stroke-dasharray="3 4" opacity=".55"/>';
+   pts.forEach(p=>{body+='<circle cx="'+x(p.i)+'" cy="'+y(p.v)+'" r="'+(p.p?3:3.5)+'" fill="'+(p.p?'#0f1420':AC_INK)+'" stroke="'+AC_INK+'" stroke-width="1.5"/>'
+    +'<circle cx="'+x(p.i)+'" cy="'+y(p.v)+'" r="11" fill="transparent"'+acTip(hp+' · '+p.l+(p.p?' (parcial)':'')+': '+acPct(p.v/100)+' · '+acNum(p.r)+' de '+acNum(p.g))+'/>';});
+   const ref=solid.length?solid[solid.length-1]:pts[pts.length-1];
+   lastTxt=acPct(ref.v/100,0); sub=acNum(ref.g)+' alertas em '+ref.l;
+   if(ref.g<A.minVol)sub='volume baixo ('+acNum(ref.g)+' alertas)';
+  } else sub='sem volume no período';
+  if(meta){let mp='';meta.forEach((v,k)=>{mp+=(k?'L':'M')+x(mi+k)+' '+y(v);});
+   body+='<path d="'+mp+'" fill="none" stroke="'+AC_MUT+'" stroke-width="1.8" stroke-dasharray="5 4"/>';
+   meta.forEach((v,k)=>{body+='<circle cx="'+x(mi+k)+'" cy="'+y(v)+'" r="10" fill="transparent"'+acTip('Meta '+hp+' · '+labs[mi+k]+': '+v+'%')+'/>';});}
+  let ax='';[0,mi,n-1].forEach(i=>{ax+='<text x="'+x(i)+'" y="'+(H-B+16)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+labs[i]+'</text>';});
+  h+='<div class="ac-sm"><div class="ac-smh"><i class="dot" style="background:'+hospColor(hp)+'"></i>'
+   +'<span class="nm">'+esc(hp)+'</span><b>'+lastTxt+'</b></div>'
+   +'<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+g+body+ax
+   +'<text x="'+(L-6)+'" y="'+(y(100)+4)+'" text-anchor="end" fill="'+AC_MUT+'" font-size="11">100</text>'
+   +'<text x="'+(L-6)+'" y="'+(y(0)+4)+'" text-anchor="end" fill="'+AC_MUT+'" font-size="11">0</text></svg>'
+   +'<div class="ac-smf">'+esc(sub)+'</div></div>';});
+ return h+'</div><div class="ac-leg"><span>'+acSolid(AC_INK)+'Realizado</span>'
+  +'<span>'+acDash(AC_MUT)+'Meta do cliente</span></div>';}
+
+// ---------- 5. penetracao hoje vs meta ----------
+function acChartPen(A){
+ const real=acPenHosp(), k=acPenMetaIdx(), mesL=['Ago','Set','Out','Nov','Dez'][k];
+ const rows=hospsView().map(h=>({h:h,v:real[h]||0,m:(A.metaPen[h]||[])[k]})).sort((a,b)=>b.v-a.v);
+ const W=1200,H=rows.length*40+52,L=150,R=90,T=10;
+ let body='';
+ [0,25,50,75,100].forEach(v=>{const x=L+(W-L-R)*v/100;
+  body+='<line x1="'+x+'" x2="'+x+'" y1="'+T+'" y2="'+(T+rows.length*40)+'" stroke="'+AC_GRID+'" stroke-width="1"/>'
+   +'<text x="'+x+'" y="'+(H-14)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+v+'%</text>';});
+ rows.forEach((r,i)=>{const yy=T+i*40+8, bw=(W-L-R)*r.v/100;
+  body+='<text x="'+(L-12)+'" y="'+(yy+16)+'" text-anchor="end" fill="'+AC_INK+'" font-size="13">'+esc(r.h)+'</text>';
+  body+='<rect x="'+L+'" y="'+yy+'" width="'+Math.max(2,bw)+'" height="22" rx="3" fill="'+AC_BLUE+'"'
+   +acTip(r.h+': '+r.v.toFixed(1).replace('.',',')+'% de cobertura'+(r.m!=null?' · meta '+r.m+'%':''))+'/>';
+  if(r.m!=null){const xm=L+(W-L-R)*r.m/100;
+   body+='<line x1="'+xm+'" x2="'+xm+'" y1="'+(yy-4)+'" y2="'+(yy+26)+'" stroke="'+AC_MUT+'" stroke-width="2"/>'
+    +'<line x1="'+xm+'" x2="'+xm+'" y1="'+(yy-4)+'" y2="'+(yy+26)+'" stroke="transparent" stroke-width="14"'+acTip('Meta '+r.h+' ('+mesL+'): '+r.m+'%')+'/>';
+   const gap=r.v-r.m, ok=gap>=-0.5;
+   body+='<text x="'+(W-R+10)+'" y="'+(yy+16)+'" fill="'+(ok?'#22c55e':'#f59e0b')+'" font-size="12" font-weight="700">'
+    +(gap>=0?'+':'')+gap.toFixed(1).replace('.',',')+'pp</text>';}});
+ return '<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+body
+  +'<line x1="'+L+'" x2="'+L+'" y1="'+T+'" y2="'+(T+rows.length*40)+'" stroke="#383f57" stroke-width="1"/></svg>'
+  +'<div class="ac-leg"><span><i style="background:'+AC_BLUE+'"></i>Cobertura de escopos hoje</span>'
+  +'<span>'+acSolid(AC_MUT)+'Meta de '+mesL+'</span></div>';}
+
+// ---------- 6. efetividade por categoria no mes de referencia ----------
+function acChartCat(A){
+ const agg={};DATA.rules.forEach(r=>{if(!r.gen)return;const c=(r._ecat||r.cat);
+  const o=agg[c]=agg[c]||[0,0];o[0]+=r.gen;o[1]+=r.res;});
+ const rows=Object.keys(agg).map(c=>({c:c,g:agg[c][0],r:agg[c][1],v:agg[c][1]/agg[c][0]}))
+  .filter(x=>x.g>0).sort((a,b)=>b.v-a.v);
+ if(!rows.length)return '<div class="empty">Sem alertas no mês de referência.</div>';
+ const W=1200,H=rows.length*34+50,L=240,R=70,T=10, top=Math.max(50,Math.ceil(Math.max.apply(null,rows.map(r=>100*r.v))/10)*10);
+ let body='';
+ for(let v=0;v<=top;v+=Math.max(10,Math.round(top/5/10)*10)){const x=L+(W-L-R)*v/top;
+  body+='<line x1="'+x+'" x2="'+x+'" y1="'+T+'" y2="'+(T+rows.length*34)+'" stroke="'+AC_GRID+'" stroke-width="1"/>'
+   +'<text x="'+x+'" y="'+(H-14)+'" text-anchor="middle" fill="'+AC_MUT+'" font-size="12">'+v+'%</text>';}
+ rows.forEach((r,i)=>{const yy=T+i*34+6, bw=(W-L-R)*(100*r.v)/top;
+  body+='<text x="'+(L-12)+'" y="'+(yy+15)+'" text-anchor="end" fill="'+AC_INK+'" font-size="13">'+esc(catLabel(r.c))+'</text>';
+  body+='<rect x="'+L+'" y="'+yy+'" width="'+Math.max(2,bw)+'" height="20" rx="3" fill="'+AC_BLUE+'"'
+   +acTip(catLabel(r.c)+': '+acPct(r.v)+' · '+acNum(r.r)+' de '+acNum(r.g)+' alertas')+'/>';
+  body+='<text x="'+(L+Math.max(2,bw)+10)+'" y="'+(yy+15)+'" font-size="12"><tspan fill="'+AC_INK+'" font-weight="700">'+acPct(r.v,0)+'</tspan><tspan fill="'+AC_MUT+'">  ·  '+acNum(r.g)+' alertas</tspan></text>';});
+ return '<svg viewBox="0 0 '+W+' '+H+'" class="ac-svg" role="img">'+body
+  +'<line x1="'+L+'" x2="'+L+'" y1="'+T+'" y2="'+(T+rows.length*34)+'" stroke="#383f57" stroke-width="1"/></svg>';}
+
+// ---------- 7. regras que mais melhoraram ----------
+function acTop(A){
+ if(!A.top||!A.top.length)return '<div class="empty">Sem comparativo disponível.</div>';
+ const idx={};DATA.rules.forEach(r=>idx[r.hosp+'||'+r.cod]=r);
+ let h='<table class="ac-tbl"><thead><tr><th>Regra</th><th>Hospital</th><th class="num">'+esc(A.prevL)+'</th>'
+  +'<th class="num">'+esc(A.refL)+'</th><th class="num">Ganho</th><th class="num">Alertas '+esc(A.refL)+'</th></tr></thead><tbody>';
+ A.top.forEach(t=>{const r=idx[t.h+'||'+t.c], e0=t.r0/t.g0, e1=t.r1/t.g1, d=(e1-e0)*100;
+  h+='<tr><td><b>'+esc(t.c)+'</b><span class="ac-rd">'+esc(r?r.desc.slice(0,90):'')+'</span></td>'
+   +'<td><i class="dot" style="background:'+hospColor(t.h)+'"></i>'+esc(t.h)+'</td>'
+   +'<td class="num">'+acPct(e0,0)+'</td><td class="num"><b>'+acPct(e1,0)+'</b></td>'
+   +'<td class="num"><span class="ac-gain">+'+d.toFixed(1).replace('.',',')+'pp</span></td>'
+   +'<td class="num">'+acNum(t.g1)+'</td></tr>';});
+ return h+'</tbody></table>';}
+
+// ---------- tabela de dados ----------
+function acTable(A){
+ let h='<details class="ac-det"><summary>Ver tabela de dados</summary><table class="ac-tbl"><thead><tr><th>Mês</th>'
+  +'<th class="num">Alertas</th><th class="num">Resolvidos</th><th class="num">Efetividade</th><th class="num">Regras ativas</th></tr></thead><tbody>';
+ A.meses.forEach(m=>{h+='<tr><td>'+m.l+(m.p?' (parcial)':'')+'</td><td class="num">'+acNum(m.a)+'</td><td class="num">'+acNum(m.r)
+  +'</td><td class="num">'+acPct(m.r/m.a)+'</td><td class="num">'+acNum(m.n)+'</td></tr>';});
+ h+='</tbody></table><table class="ac-tbl" style="margin-top:12px"><thead><tr><th>Hospital</th>'
+  +A.meses.map(m=>'<th class="num">'+m.l+'</th>').join('')+'</tr></thead><tbody>';
+ hospsView().forEach(hp=>{h+='<tr><td><i class="dot" style="background:'+hospColor(hp)+'"></i>'+esc(hp)+'</td>'
+  +(A.hosp[hp]||[]).map(v=>'<td class="num">'+(v[0]?acPct(v[1]/v[0],0)+' <span class="ac-rd2">'+acNum(v[0])+'</span>':'—')+'</td>').join('')+'</tr>';});
+ return h+'</tbody></table></details>';}
+
+// ---------- tooltip ----------
+function acWire(root){
+ let tip=document.getElementById('ac-tip');
+ if(!tip){tip=document.createElement('div');tip.id='ac-tip';tip.className='ac-tip';document.body.appendChild(tip);}
+ root.querySelectorAll('[data-tip]').forEach(el=>{
+  el.addEventListener('mouseenter',e=>{tip.textContent=el.getAttribute('data-tip');tip.style.display='block';});
+  el.addEventListener('mousemove',e=>{const p=12;let x=e.clientX+p,y=e.clientY+p;
+   const r=tip.getBoundingClientRect();
+   if(x+r.width>window.innerWidth-8)x=e.clientX-r.width-p;
+   if(y+r.height>window.innerHeight-8)y=e.clientY-r.height-p;
+   tip.style.left=x+'px';tip.style.top=y+'px';});
+  el.addEventListener('mouseleave',()=>{tip.style.display='none';});});}
+
+// ---------- render ----------
+function renderAcomp(){
+ const cont=document.getElementById('acomp-view');if(!cont)return;
+ const A=DATA.acomp;
+ if(!A){cont.innerHTML='<div class="empty">Base de acompanhamento ainda não carregada.</div>';return;}
+ const p=A.meses.some(m=>m.p)?'<span class="ac-note">* mês parcial — fora das comparações</span>':'';
+ let h=acKpis(A);
+ h+=acCard(1,'Regras ativas por mês','Regra com ao menos 1 alerta gerado no mês, empilhada por hospital. '+p,acChartAtivas(A));
+ h+=acCard(2,'Efetividade consolidada por mês','Alertas resolvidos ÷ gerados, de Maio em diante. A linha pontilhada é a meta da Gestão de Metas (Set → Dez).',acChartEfet(A));
+ h+=acCard(3,'Alertas gerados e resolvidos por mês','Mostra se a efetividade mudou por mais resolução ou por menos geração.',acChartVol(A));
+ h+=acCard(4,'Efetividade por hospital','Um painel por cliente, cada um com a sua própria meta. Escala 0–100% igual em todos.',acGrid(A));
+ h+=acCard(5,'Penetração — hoje vs meta','Cobertura de escopos de cada cliente hoje, contra a meta do mês corrente.',acChartPen(A));
+ h+=acCard(6,'Efetividade por categoria em '+esc(A.refL),'Onde a régua está funcionando e onde não está, no último mês fechado.',acChartCat(A));
+ h+=acCard(7,'Regras que mais melhoraram','De '+esc(A.prevL)+' para '+esc(A.refL)+', com pelo menos '+acNum(A.minVol)+' alertas no mês.',acTop(A));
+ h+=acTable(A);
+ cont.innerHTML=h;acWire(cont);}
+
 // ---- tabs ----
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
- ['central','operadoras','cobertura','volume','todas','escopos','plano'].forEach(t=>document.getElementById('tab-'+t).style.display=t===b.dataset.tab?'block':'none');if(b.dataset.tab==='plano')renderPlano();if(b.dataset.tab==='escopos')renderEscopos();});
+ ['central','operadoras','cobertura','volume','todas','escopos','plano','acomp'].forEach(t=>document.getElementById('tab-'+t).style.display=t===b.dataset.tab?'block':'none');if(b.dataset.tab==='plano')renderPlano();if(b.dataset.tab==='escopos')renderEscopos();if(b.dataset.tab==='acomp')renderAcomp();});
 </script>
 <div class="modal" id="modal" style="display:none"><div class="modal-box" id="modal-box"></div></div>
 </body></html>
