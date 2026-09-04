@@ -282,8 +282,12 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script>
 let DATA=null;
-const HOSP_COLORS={'Einstein':'#4f8cff','HAOC':'#a78bfa','HCOR':'#f472b6','Sírio BSB':'#2dd4bf','Sírio SP':'#fbbf24','AC Camargo':'#a3e635','POC':'#f97316'};
+const HOSP_COLORS={'Einstein':'#4f8cff','HAOC':'#a78bfa','HCOR':'#f472b6','Sírio BSB':'#2dd4bf','Sírio SP':'#fbbf24','AC Camargo':'#a3e635','Einstein GO':'#22d3ee','POC':'#f97316'};
 const HOSP_FALLBACK=['#38bdf8','#c084fc','#fb7185','#34d399','#facc15','#84cc16','#f97316','#e879f9','#22d3ee','#fb923c'];
+// hospitais exibidos nas análises (exclui entidades não-hospitalares, ex.: POC)
+function nonHospMap(){const l=(typeof DATA!=='undefined'&&DATA&&DATA.nonHosp)?DATA.nonHosp:['POC'];const o={};l.forEach(h=>o[h]=1);return o;}
+function isNonHosp(h){return !!nonHospMap()[h];}
+function hospsView(){const n=nonHospMap();return ((typeof DATA!=='undefined'&&DATA&&DATA.hosps)?DATA.hosps:[]).filter(h=>!n[h]);}
 function hospColor(h){if(HOSP_COLORS[h])return HOSP_COLORS[h];const i=((DATA&&DATA.hosps)?DATA.hosps.indexOf(h):-1);return HOSP_FALLBACK[(i<0?0:i)%HOSP_FALLBACK.length];}
 let GV=0;
 function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
@@ -301,7 +305,7 @@ function buildStats(){const m=DATA.meta,s=document.getElementById('stats');s.inn
  const lm=m.lastmonth||{alerts:m.alerts_total,valor:m.grandValor,eff:(m.grandGen?m.grandRes/m.grandGen:0),label:''};
  const suf=lm.label?' ('+lm.label+(lm.parcial?' parcial':'')+')':'';
  [['Regras',m.general+m.operator],['Categorias',m.n_categories],['Escopos',m.n_scopes],
-  ['Hospitais',DATA.hosps.length],
+  ['Hospitais',hospsView().length],
   ['Alertas'+suf,lm.alerts.toLocaleString('pt-BR')],
   ['Valor apontado'+suf,money(lm.valor)],
   ['Efetividade'+suf,pct(lm.eff)]]
@@ -430,23 +434,23 @@ function fmtCell(num,den){if(den===0)return'—';
  return Math.round(num/den*100)+'%';}
 function hospTotals(h){let num=0,den=0;DATA.coverage.categories.forEach(c=>{const x=catCell(c,h);num+=x.num;den+=x.den;});return{num,den,p:den>0?num/den:0};}
 function buildCovSummary(){const s=document.getElementById('covsummary');s.innerHTML='';
- DATA.hosps.forEach(h=>{const t=hospTotals(h),p=t.p,col=covColor(p);
+ hospsView().forEach(h=>{const t=hospTotals(h),p=t.p,col=covColor(p);
   const c=el('div','covcard');
   c.innerHTML=`<div class="h"><i class="dot" style="background:${hospColor(h)}"></i>${esc(h)}</div>
    <div class="big" style="color:${col}">${COVM==='abs'?fmtCell(t.num,t.den):Math.round(p*100)+'%'}</div>
    <div class="sub">${Math.round(p*100)}% de cobertura geral${COVE?' (c/ efetividade)':''}</div>
    <div class="cov-bar"><i style="width:${Math.round(p*100)}%;background:${col}"></i></div>`;s.appendChild(c);});}
 function buildCovTable(){const cov=DATA.coverage.categories,t=document.getElementById('covtable');
- let head='<thead><tr><th class="cat-name">Categoria</th>'+DATA.hosps.map(h=>`<th>${esc(h)}</th>`).join('')+'<th>Base</th></tr></thead>';
+ let head='<thead><tr><th class="cat-name">Categoria</th>'+hospsView().map(h=>`<th>${esc(h)}</th>`).join('')+'<th>Base</th></tr></thead>';
  let body='<tbody>';
  cov.forEach((c,ci)=>{body+=`<tr><td class="cat-name">${esc(catLabel(c.cat))}</td>`;
-  DATA.hosps.forEach(h=>{const x=catCell(c,h);const p=x.p;
+  hospsView().forEach(h=>{const x=catCell(c,h);const p=x.p;
    body+=`<td><div class="cell volcell" data-ci="${ci}" data-h="${esc(h)}" style="background:${covBg(p)};cursor:pointer">
      <span style="color:${covColor(p)}">${fmtCell(x.num,x.den)}</span>
      <div class="cov-bar"><i style="width:${Math.round(p*100)}%;background:${covColor(p)}"></i></div></div></td>`;});
   body+=`<td><span class="pill">${c.total_scopes}</span></td></tr>`;});
  body+=`<tr style="background:var(--panel2)"><td class="cat-name" style="font-weight:800">Cobertura geral</td>`;
- DATA.hosps.forEach(h=>{const t2=hospTotals(h),p=t2.p;
+ hospsView().forEach(h=>{const t2=hospTotals(h),p=t2.p;
   body+=`<td><div class="cell" style="background:${covBg(p)}"><span style="color:${covColor(p)};font-weight:800">${COVM==='abs'?fmtCell(t2.num,t2.den):Math.round(p*100)+'%'}</span>
    <div class="cov-bar"><i style="width:${Math.round(p*100)}%;background:${covColor(p)}"></i></div></div></td>`;});
  body+=`<td></td></tr></tbody>`;t.innerHTML=head+body;
@@ -468,7 +472,7 @@ document.querySelectorAll('#coveff button').forEach(b=>b.onclick=()=>{document.q
 // ---- volume ----
 let VOLM='qtd';
 function catHospRules(cat,h){return DATA.rules.filter(r=>(r._ecat||r.cat)===cat&&r.hosp===h);}
-function buildVol(){const C=DATA.counts,H=DATA.hosps,t=document.getElementById('voltable');
+function buildVol(){const C=DATA.counts,H=hospsView(),t=document.getElementById('voltable');
  let head='<thead><tr><th class="cat-name">Categoria</th>'+H.map(h=>`<th>${esc(h)}</th>`).join('')+'<th>Total</th></tr></thead>';
  let body='<tbody>';const colG={},colR={},colN={};H.forEach(h=>{colG[h]=0;colR[h]=0;colN[h]=0;});
  catOrder().forEach((cat,ci)=>{
@@ -682,7 +686,7 @@ function rebuildDerived(){
  const gen={},ops={},counts={},cov={};
  DATA.rules.forEach(r=>{const e=effCatEsc(r);r._ecat=e.cat;r._eesc=e.escopo;r._ekey=e.key;const cat=e.cat,s=e.escopo,op=r.op,h=r.hosp;
   (counts[cat]=counts[cat]||{});counts[cat][h]=(counts[cat][h]||0)+1;
-  const tree=op?(ops[op]=ops[op]||{}):gen;const co=tree[cat]=tree[cat]||{};(co[s]=co[s]||[]).push(r);
+  const tree=op?(isNonHosp(h)?null:(ops[op]=ops[op]||{})):gen;if(!tree)return;const co=tree[cat]=tree[cat]||{};(co[s]=co[s]||[]).push(r);
   const cc=cov[cat]=cov[cat]||{sc:{},w:{},hosp:{}};cc.sc[s]=true;cc.w[s]=(cc.w[s]||0)+(r.valor||0);
   const hh=cc.hosp[h]=cc.hosp[h]||{};const st=hh[s]=hh[s]||{gen:0,res:0,n:0};st.gen+=r.gen;st.res+=r.res;st.n++;});
  const categories=[];const CO=catOrder();
@@ -1016,7 +1020,7 @@ function renderPlanoSummary(){
  h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
 
 function renderPlano(){
- const cont=document.getElementById('plano-setup');const atts=planoAtts();const H=DATA.hosps;
+ const cont=document.getElementById('plano-setup');const atts=planoAtts();const H=hospsView();
  let h=renderPlanoSummary();
  // ---- Tabela de rollout: atendimento × hospital (célula = mês) ----
  h+='<div class="section-title" style="font-size:15px;margin:6px 0 8px">Meses de rollout por hospital</div>';
@@ -1039,7 +1043,7 @@ function renderPlano(){
  if(UI.planoGen)renderPlanoOutput();
 }
 function renderPlanoOutput(){
- const out=document.getElementById('plano-output');const f=UI.planoFilter;const mode=UI.planoMode;const H=DATA.hosps;const n=H.length;
+ const out=document.getElementById('plano-output');const f=UI.planoFilter;const mode=UI.planoMode;const H=hospsView();const n=H.length;
  let h='<div class="toolrow" style="margin-top:16px"><span class="tglabel">Visualização:</span><div class="toggle" id="plano-mode"><button class="'+(mode==='presenca'?'active':'')+'" data-pm="presenca">Presença</button><button class="'+(mode==='efetividade'?'active':'')+'" data-pm="efetividade">Efetividade</button></div></div>';
  h+='<div class="legend-tier">Filtrar tiers: ';
  TIERS.forEach(t=>h+=`<span class="mchip ${f[t]?'on':''}" data-f="${t}">${t}</span>`);
@@ -1105,7 +1109,7 @@ function bootData(){
 }
 function initApp(){
  GV=DATA.meta.grandValor;buildRuleIdx();rebuildDerived();buildMonths();buildScopeStats();buildStats();
- (function(){const sh=document.getElementById("subhead");if(sh){const n=(DATA.hosps||[]).length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
+ (function(){const sh=document.getElementById("subhead");if(sh){const n=hospsView().length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
  (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
    if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;fhosp.appendChild(o);});
