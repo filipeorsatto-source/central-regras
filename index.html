@@ -234,7 +234,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 <header><div class="wrap">
  <div class="userbar" id="userbar" style="display:none"><span id="user-email" class="mono-sm"></span><button class="btn-sec" id="logout-btn">Sair</button></div>
  <h1>Central de Regras de Auditoria Hospitalar</h1>
- <p id="subhead">Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras</p>
+ <p id="subhead">Categorias, escopos, cobertura, peso por valor em alerta e efetividade das regras</p>
  <div class="stats" id="stats"></div>
  <p class="hint" id="basecov" style="margin-top:10px"></p>
 </div></header>
@@ -258,7 +258,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
     <button class="btn-sec" id="btn-cats">Categorias</button>
     <span class="hint" id="central-hint"></span>
    </div>
-   <div class="legend"><span class="wpill">Peso X%</span> = participação no valor apontado da base &nbsp;·&nbsp;
+   <div class="legend"><span class="wpill">Peso X%</span> = participação no valor em alerta da base &nbsp;·&nbsp;
     <span class="epill" style="color:var(--green);border-color:var(--green)">Efet Y%</span> = resolvidos ÷ alertas gerados</div>
    <div id="tree"></div>
   </section>
@@ -319,7 +319,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 
   <section id="tab-acomp" style="display:none">
    <div class="section-title">Acompanhamento — evolução de regras e efetividade</div>
-   <p class="muted" style="margin-bottom:14px">Série de Maio/26 em diante. Efetividade sempre consolidada (alertas resolvidos ÷ gerados), a mesma conta do cabeçalho do app.</p>
+   <p class="muted" style="margin-bottom:14px">Série de Maio/26 em diante. Efetividade sempre consolidada (alertas resolvidos ÷ gerados) e apurada <b>somente sobre alertas de contas finalizadas</b> — conta não finalizada ainda não diz se a lógica da regra faz sentido. É a mesma base do cabeçalho do app.</p>
    <div id="acomp-view"></div>
   </section>
  </main>
@@ -345,7 +345,7 @@ function money(v){return 'R$ '+Math.round(v).toLocaleString('pt-BR');}
 function effVal(gen,res){return gen>0?res/gen:null;}
 function effColor(e){return e==null?'var(--muted)':e>=0.35?'var(--green)':e>=0.15?'var(--amber)':'var(--red)';}
 function agg(rules){let v=0,g=0,r=0;rules.forEach(x=>{v+=x.valor;g+=x.gen;r+=x.res;});return{valor:v,gen:g,res:r,weight:GV?v/GV:0,eff:effVal(g,r)};}
-function wpill(w){return `<span class="wpill" title="Peso no valor apontado da base">Peso ${pct(w,1)}</span>`;}
+function wpill(w){return `<span class="wpill" title="Peso no valor em alerta da base">Peso ${pct(w,1)}</span>`;}
 function epill(gen,res){const e=effVal(gen,res),c=effColor(e);return `<span class="epill" style="color:${c};border-color:${c}" title="${res} resolvidos de ${gen} alertas gerados">Efet ${e==null?'—':pct(e)}</span>`;}
 
 // ---- stats header ----
@@ -355,7 +355,7 @@ function buildStats(){const m=DATA.meta,s=document.getElementById('stats');s.inn
  [['Regras',(DATA.rules||[]).length],['Categorias',catOrder().length],['Escopos',allScopes().length],
   ['Hospitais',hospsView().length],
   ['Alertas'+suf,lm.alerts.toLocaleString('pt-BR')],
-  ['Valor apontado'+suf,money(lm.valor)],
+  ['Valor em alerta'+suf,money(lm.valor)],
   ['Efetividade'+suf,pct(lm.eff)]]
  .forEach(([l,v])=>{const d=el('div','stat');d.innerHTML=`<b>${v}</b><span>${l}</span>`;s.appendChild(d);});
  buildBaseCov();}
@@ -367,7 +367,7 @@ function buildBaseCov(){const e=document.getElementById('basecov');if(!e)return;
  const faixa=(p.de===p.ate)?('M\u00eas de refer\u00eancia: <b>'+mesLabel(p.de)+'</b>'+(p.parcial?'':' (m\u00eas completo)'))
   :('Base de alertas: <b>'+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+'</b>');
  e.innerHTML=faixa+' \u00b7 '
-  +DATA.meta.grandGen.toLocaleString('pt-BR')+' alertas \u00b7 '+money(DATA.meta.grandValor)+' apontados'+dia;}
+  +DATA.meta.grandGen.toLocaleString('pt-BR')+' alertas \u00b7 '+money(DATA.meta.grandValor)+' em alerta \u00b7 somente contas finalizadas'+dia;}
 
 // ---- shared tree builder (central + operadoras) ----
 function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];
@@ -506,7 +506,7 @@ function buildCovTable(){const cov=DATA.coverage.categories,t=document.getElemen
  body+=`<td></td></tr></tbody>`;t.innerHTML=head+body;
  t.querySelectorAll('.volcell[data-ci]').forEach(cell=>cell.onclick=()=>showMissing(+cell.dataset.ci,cell.dataset.h));}
 function refreshCov(){document.getElementById('covexplain').textContent=
-  (COVM==='abs'?'Escopos cobertos / total de escopos.':COVM==='pct'?'Percentual de escopos cobertos.':'Percentual ponderado pelo valor apontado de cada escopo.')
+  (COVM==='abs'?'Escopos cobertos / total de escopos.':COVM==='pct'?'Percentual de escopos cobertos.':'Percentual ponderado pelo valor em alerta de cada escopo.')
   +(COVE?' Cada escopo coberto é multiplicado pela efetividade da(s) regra(s) que o cobrem.':'');
  buildCovSummary();buildCovTable();}
 function showMissing(ci,h){const c=DATA.coverage.categories[ci],o=c.hosp[h],p=document.getElementById('misspanel');
@@ -1160,7 +1160,7 @@ function bootData(){
 }
 function initApp(){
  GV=DATA.meta.grandValor;buildRuleIdx();rebuildDerived();buildMonths();buildScopeStats();buildStats();
- (function(){const sh=document.getElementById("subhead");if(sh){const n=hospsView().length;sh.textContent="Categorias, escopos, cobertura, peso por valor apontado e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
+ (function(){const sh=document.getElementById("subhead");if(sh){const n=hospsView().length;sh.textContent="Categorias, escopos, cobertura, peso por valor em alerta e efetividade das regras — "+n+" cliente"+(n===1?"":"s");}})();
  (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
    if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;fhosp.appendChild(o);});
@@ -1421,7 +1421,7 @@ function renderAcomp(){
  const p=A.meses.some(m=>m.p)?'<span class="ac-note">* mês parcial — fora das comparações</span>':'';
  let h=acKpis(A);
  h+=acCard(1,'Regras ativas por mês','Regra com ao menos 1 alerta gerado no mês, empilhada por hospital. '+p,acChartAtivas(A));
- h+=acCard(2,'Efetividade consolidada por mês','Alertas resolvidos ÷ gerados, de Maio em diante. A linha pontilhada é a meta da Gestão de Metas (Set → Dez).',acChartEfet(A));
+ h+=acCard(2,'Efetividade consolidada por mês','Alertas resolvidos ÷ gerados, somente em contas finalizadas, de Maio em diante. A linha pontilhada é a meta da Gestão de Metas (Set → Dez).',acChartEfet(A));
  h+=acCard(3,'Alertas gerados e resolvidos por mês','Mostra se a efetividade mudou por mais resolução ou por menos geração.',acChartVol(A));
  h+=acCard(4,'Efetividade por hospital','Um painel por cliente, cada um com a sua própria meta. Escala 0–100% igual em todos.',acGrid(A));
  h+=acCard(5,'Penetração — hoje vs meta','Cobertura de escopos de cada cliente hoje, contra a meta do mês corrente.',acChartPen(A));
