@@ -330,12 +330,13 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 <script>
 let DATA=null;
 // paleta validada para o fundo escuro (faixa de luminancia, piso de croma, separacao CVD e contraste)
-const HOSP_COLORS={'Einstein':'#3987e5','HAOC':'#9085e9','HCOR':'#d55181','Sírio BSB':'#199e70','Sírio SP':'#c98500','AC Camargo':'#008300','Einstein GO':'#d95926','POC':'#e66767'};
+const HOSP_COLORS={'Einstein':'#3987e5','HAOC':'#9085e9','HCOR':'#d55181','Sírio BSB':'#199e70','Sírio SP':'#c98500','AC Camargo':'#008300','Einstein GO':'#d95926','POC':'#e66767','AACD':'#17b0c4','São Camilo':'#a855c7'};
 const HOSP_FALLBACK=['#38bdf8','#c084fc','#fb7185','#34d399','#facc15','#84cc16','#f97316','#e879f9','#22d3ee','#fb923c'];
 // hospitais exibidos nas análises (exclui entidades não-hospitalares, ex.: POC)
 function nonHospMap(){const l=(typeof DATA!=='undefined'&&DATA&&DATA.nonHosp)?DATA.nonHosp:['POC'];const o={};l.forEach(h=>o[h]=1);return o;}
 function isNonHosp(h){return !!nonHospMap()[h];}
 function hospsView(){const n=nonHospMap();return ((typeof DATA!=='undefined'&&DATA&&DATA.hosps)?DATA.hosps:[]).filter(h=>!n[h]);}
+function audView(){const a=(typeof DATA!=='undefined'&&DATA&&DATA.auditClients)?DATA.auditClients:null;return a&&a.length?hospsView().filter(h=>a.indexOf(h)>=0):hospsView();}
 function hospColor(h){if(HOSP_COLORS[h])return HOSP_COLORS[h];const i=((DATA&&DATA.hosps)?DATA.hosps.indexOf(h):-1);return HOSP_FALLBACK[(i<0?0:i)%HOSP_FALLBACK.length];}
 let GV=0;
 function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
@@ -1204,7 +1205,7 @@ function acKpis(A){
   +t[2]+'<span class="ac-kh">'+esc(t[3])+'</span></div>').join('')+'</div>';}
 
 // penetracao = cobertura de escopos (mesma conta da aba Cobertura), media simples dos clientes
-function acPenHosp(){const o={};hospsView().forEach(h=>{let num=0,den=0;
+function acPenHosp(){const o={};audView().forEach(h=>{let num=0,den=0;
   DATA.coverage.categories.forEach(c=>{const s=c.hosp[h];const tot=c.scopes.length;num+=tot-s.missing.length;den+=tot;});
   o[h]=den?100*num/den:0;});return o;}
 function acPenNow(){const p=acPenHosp();const v=Object.values(p);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
@@ -1299,7 +1300,7 @@ function acGrid(A){
  const labs=A.meses.map(m=>m.l).concat(AC_FUT.filter(f=>!A.meses.some(m=>m.l===f)));
  const mi=labs.indexOf('Set'), n=labs.length;
  let h='<div class="ac-grid">';
- hospsView().forEach(hp=>{
+ audView().forEach(hp=>{
   const row=A.hosp[hp]||[], meta=A.metaEf[hp];
   const pts=A.meses.map((m,i)=>({i:i,g:row[i]?row[i][0]:0,r:row[i]?row[i][1]:0,p:m.p,l:m.l}))
    .filter(p=>p.g>0).map(p=>Object.assign(p,{v:100*p.r/p.g}));
@@ -1333,7 +1334,7 @@ function acGrid(A){
 // ---------- 5. penetracao hoje vs meta ----------
 function acChartPen(A){
  const real=acPenHosp(), k=acPenMetaIdx(), mesL=['Ago','Set','Out','Nov','Dez'][k];
- const rows=hospsView().map(h=>({h:h,v:real[h]||0,m:(A.metaPen[h]||[])[k]})).sort((a,b)=>b.v-a.v);
+ const rows=audView().map(h=>({h:h,v:real[h]||0,m:(A.metaPen[h]||[])[k]})).sort((a,b)=>b.v-a.v);
  const W=1200,H=rows.length*40+52,L=150,R=90,T=10;
  let body='';
  [0,25,50,75,100].forEach(v=>{const x=L+(W-L-R)*v/100;
@@ -1396,7 +1397,7 @@ function acTable(A){
   +'</td><td class="num">'+acPct(m.r/m.a)+'</td><td class="num">'+acNum(m.n)+'</td></tr>';});
  h+='</tbody></table><table class="ac-tbl" style="margin-top:12px"><thead><tr><th>Hospital</th>'
   +A.meses.map(m=>'<th class="num">'+m.l+'</th>').join('')+'</tr></thead><tbody>';
- hospsView().forEach(hp=>{h+='<tr><td><i class="dot" style="background:'+hospColor(hp)+'"></i>'+esc(hp)+'</td>'
+ audView().forEach(hp=>{h+='<tr><td><i class="dot" style="background:'+hospColor(hp)+'"></i>'+esc(hp)+'</td>'
   +(A.hosp[hp]||[]).map(v=>'<td class="num">'+(v[0]?acPct(v[1]/v[0],0)+' <span class="ac-rd2">'+acNum(v[0])+'</span>':'—')+'</td>').join('')+'</tr>';});
  return h+'</tbody></table></details>';}
 
