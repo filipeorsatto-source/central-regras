@@ -11,6 +11,34 @@ header h1{font-size:20px;font-weight:700}header p{color:var(--muted);font-size:1
 .wrap{max-width:1320px;margin:0 auto;padding:0 20px}
 .stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:104px}
+
+/* --- colunas editáveis em Todas as Regras --- */
+.rm-cell{display:inline-block;min-width:54px;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;
+  padding:2px 6px;border:1px dashed #28344d;border-radius:6px;font-size:11px;color:var(--muted);cursor:pointer}
+.rm-cell.wide{min-width:120px;max-width:156px}
+.rm-cell:hover{border-color:var(--accent);color:var(--txt)}
+.rm-cell.set{border-style:solid;border-color:#2d3f5f;color:var(--txt);background:#121b2e}
+.rm-sel{background:#0b1120;border:1px solid var(--accent);color:var(--txt);border-radius:6px;padding:1px 3px;font-size:11px;max-width:96px}
+.rm-sel.wide{max-width:150px}
+.rm-sel:focus{outline:none;border-color:var(--accent)}
+td.rmcol{padding:3px 6px}
+/* --- Análise de Escopos: colunas Valor / Tempo --- */
+th.vt-h{background:var(--panel2);color:var(--muted);font-weight:700;text-align:center;min-width:72px}
+th.vt-first,td.vt-first{border-left:2px solid var(--line)}
+td.vtcol{background:#0e1526;min-width:72px}
+/* --- drilldown em tabela --- */
+table.rd-tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.rd-tbl th{background:var(--panel2);color:var(--muted);font-weight:700;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.rd-tbl td{padding:4px 8px;border-bottom:1px solid #1b2436;vertical-align:top}
+table.rd-tbl td.rd-desc{color:var(--muted);max-width:520px}
+table.rd-tbl td.chkcol,table.rd-tbl th.chkcol{text-align:center;cursor:pointer;white-space:nowrap}
+table.rd-tbl td.chkcol:hover{background:#17203a}
+/* --- Planejamento --- */
+table.pl-tbl td.rh.pl-rule{max-width:420px;white-space:normal;line-height:1.3}
+table.pl-tbl .pl-desc{color:var(--muted)}
+table.pl-tbl td.pl-on{background:rgba(79,140,255,0.16);box-shadow:inset 0 0 0 1px rgba(79,140,255,0.25)}
+table.pl-tbl td.pl-na{background:repeating-linear-gradient(135deg,#131b2c,#131b2c 5px,#182138 5px,#182138 10px)}
+table.pl-tbl td.pl-na.pl-on{background:repeating-linear-gradient(135deg,#1a2744,#1a2744 5px,#20305a 5px,#20305a 10px)}
 .stat b{display:block;font-size:20px;color:var(--accent)}.stat span{color:var(--muted);font-size:12px}
 .stat b .stot{font-size:12px;font-weight:600;color:var(--muted)}
 nav{display:flex;gap:6px;padding:14px 0 0;flex-wrap:wrap}
@@ -242,12 +270,11 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
 <div class="wrap">
  <nav>
   <button class="active" data-tab="central">Central de Regras</button>
-  <button data-tab="operadoras">Operadoras</button>
   <button data-tab="cobertura">Cobertura por Hospital</button>
   <button data-tab="volume">Regras por Categoria</button>
   <button data-tab="todas">Todas as Regras</button>
   <button data-tab="escopos">Análise Escopos</button>
-  <button data-tab="plano">Plano de Virada</button>
+  <button data-tab="plano">Planejamento</button>
   <button data-tab="acomp">Acompanhamento</button>
  </nav>
  <main>
@@ -255,6 +282,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
    <div class="toolbar">
     <input type="text" id="search" placeholder="Buscar por descrição, código ou escopo...">
     <select id="fhosp"><option value="">Todos os hospitais</option></select>
+    <select id="fop"><option value="">Todas as operadoras</option></select>
     <button class="btn-sec" id="btn-add-gscope">+ Novo escopo</button>
     <button class="btn-sec" id="btn-cats">Categorias</button>
     <span class="hint" id="central-hint"></span>
@@ -262,11 +290,6 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
    <div class="legend"><span class="wpill">Peso X%</span> = participação no valor em alerta da base &nbsp;·&nbsp;
     <span class="epill" style="color:var(--green);border-color:var(--green)">Efet Y%</span> = resolvidos ÷ alertas gerados</div>
    <div id="tree"></div>
-  </section>
-  <section id="tab-operadoras" style="display:none">
-   <div class="toolbar"><select id="opsel"></select>
-    <span class="hint">Regras específicas de operadora (exceções). Peso e efetividade seguem a mesma base.</span></div>
-   <div id="opsummary"></div><div id="optree"></div>
   </section>
   <section id="tab-cobertura" style="display:none">
    <div class="section-title">Comparativo de cobertura — hospital vs. base total</div>
@@ -305,16 +328,16 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
    <div class="big-wrap"><table class="big-table" id="bigtable"></table></div>
   </section>
   <section id="tab-escopos" style="display:none">
-   <div class="section-title">Análise de escopos por tipo de atendimento</div>
-   <p class="muted" style="margin-bottom:6px">Para cada escopo, a <b>Validação</b> (Essencial, Avançado ou NA) e em quais tipos de atendimento ele está classificado. Passe o mouse no cabeçalho do atendimento para ver a composição estimada da conta.</p>
-   <p class="hint" style="margin-bottom:12px">⚠ Composição das contas e peso de faturamento seguem sendo <b>estimativas de mercado</b> — a base de alertas não traz tipo de atendimento. Já a <b>presença de escopo</b> e a <b>efetividade</b> vêm da base real de alertas <span id="hint-periodo"></span>.</p>
-   <div class="legend-tier"><span class="tchip t-ess">E</span> Essencial <span class="tchip t-adv">A</span> Avançado <span class="tchip t-na">—</span> NA (não aplicável) &nbsp;·&nbsp; <span class="chk-ok">✔</span>/<span class="chk-no">✘</span> escopo classificado naquele tipo de atendimento</div>
+   <div class="section-title">Análise de escopos por operadora</div>
+   <p class="muted" style="margin-bottom:6px">Uma aba por cliente. Para cada escopo, as colunas mostram em quais <b>operadoras</b> ele é validado. Abra o escopo (▸) para ver as regras e marcar regra a regra se ela vale para cada operadora.</p>
+   <p class="hint" style="margin-bottom:12px">A <b>presença de escopo</b> e a <b>efetividade</b> vêm da base real de alertas <span id="hint-periodo"></span>.</p>
+   <div class="legend-tier"><span class="chk-ok">✔</span> regra vale para a operadora · <span class="chk-no">✘</span> não vale &nbsp;·&nbsp; o escopo fica ✔ na coluna da operadora quando ao menos uma regra dele estiver marcada</div>
    <div class="subtabs" id="subtabs"></div>
    <div id="escopos-view"></div>
   </section>
   <section id="tab-plano" style="display:none">
-   <div class="section-title">Plano de Virada — rollout por mês</div>
-   <p class="muted" style="margin-bottom:12px">Defina em que mês cada tipo de atendimento entra no rollout e gere o plano de escopos por hospital.</p>
+   <div class="section-title">Planejamento — regras por mês</div>
+   <p class="muted" style="margin-bottom:12px">Uma tabela por cliente, com as regras agrupadas pela <b>Classificação</b> definida em Todas as Regras. A partir do mês de <b>Planning</b> da regra, as células ficam destacadas.</p>
    <div id="plano-setup"></div>
   </section>
 
@@ -377,7 +400,7 @@ function buildBaseCov(){const e=document.getElementById('basecov');if(!e)return;
 // ---- shared tree builder (central + operadoras) ----
 function ruleRow(r){const e=effVal(r.gen,r.res),c=effColor(e);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];
  return `<tr><td class="code">${esc(r.cod)}</td><td>${esc(r.desc)}</td>
-  <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span></td>
+  <td><span class="hosp-badge" style="color:${hospColor(r.hosp)}">${esc(r.hosp)}</span>${r.op?`<span class="oplabel" title="Regra específica de operadora">${esc(r.op)}</span>`:''}</td>
   <td class="num">${pct(r.valor/GV,2)}</td>
   <td class="num" style="color:${c};font-weight:700">${e==null?'—':pct(e)}</td>
   <td class="num muted">${r.gen.toLocaleString('pt-BR')}</td>
@@ -411,8 +434,10 @@ const fhosp=document.getElementById('fhosp');
 // ---- Central de Regras: scaffold editável (mostra escopos/categorias mesmo sem regras) ----
 function centralScaffold(q,hf){const byCat={};
  allScopes().forEach(s=>{const cat=s.cat;(byCat[cat]=byCat[cat]||{});byCat[cat][s.key]=byCat[cat][s.key]||{info:{key:s.key,cat:cat,escopo:scopeLabel(s.key,s.escopo)},rules:[]};});
- DATA.rules.forEach(r=>{if(r.op)return;const e=effCatEsc(r);
+ const opf=(document.getElementById('fop')||{}).value||'';
+ DATA.rules.forEach(r=>{const e=effCatEsc(r);
   if(hf&&r.hosp!==hf)return;
+  if(opf&&(r.op||'')!==opf)return;
   if(q){const t=(r.desc+' '+r.cod+' '+e.escopo+' '+catLabel(e.cat)).toLowerCase();if(t.indexOf(q)<0)return;}
   const sc=(byCat[e.cat]=byCat[e.cat]||{});const cell=sc[e.key]=sc[e.key]||{info:{key:e.key,cat:e.cat,escopo:e.escopo},rules:[]};cell.rules.push(r);});
  return byCat;}
@@ -421,7 +446,7 @@ function inlineRename(span,current,onCommit){if(!span)return;const inp=document.
  const commit=()=>{if(done)return;done=true;const v=inp.value.trim();if(v&&v!==current)onCommit(v);else refreshCentral();};
  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){done=true;refreshCentral();}};
  inp.onblur=()=>setTimeout(commit,100);}
-function buildCentralTree(){const container=document.getElementById('tree');const q=document.getElementById('search').value.trim().toLowerCase();const hf=fhosp.value;const filtering=!!(q||hf);
+function buildCentralTree(){const container=document.getElementById('tree');const q=document.getElementById('search').value.trim().toLowerCase();const hf=fhosp.value;const opf=(document.getElementById('fop')||{}).value||'';const filtering=!!(q||hf||opf);
  const byCat=centralScaffold(q,hf);
  const cats=catOrder().slice();Object.keys(byCat).forEach(c=>{if(cats.indexOf(c)<0)cats.push(c);});
  container.innerHTML='';let shownCat=0,shownRules=0;
@@ -461,16 +486,9 @@ document.getElementById('search').oninput=refreshCentral;fhosp.onchange=refreshC
 document.getElementById('btn-add-gscope').onclick=()=>openAddScopeGlobal();
 document.getElementById('btn-cats').onclick=()=>openCatManager();
 
-// ---- operadoras ----
-const opsel=document.getElementById('opsel');
-function refreshOps(){const op=opsel.value;
- let rs=[];Object.values(DATA.operators[op]||{}).forEach(c=>Object.values(c).forEach(v=>rs=rs.concat(v)));
- const a=agg(rs);document.getElementById('opsummary').innerHTML=
-  `<div class="covcard" style="margin-bottom:14px"><div class="h">${esc(op)}</div>
-   <span class="badges"><span class="count">${rs.length} regras</span>${wpill(a.weight)}${epill(a.gen,a.res)}</span></div>`;
- buildTree(document.getElementById('optree'),DATA.operators[op]||{},'',null);
- document.getElementById('central-hint').textContent='';}
-opsel.onchange=refreshOps;
+// ---- filtro de operadora (Central) ----
+const fopsel=document.getElementById('fop');
+if(fopsel)fopsel.onchange=refreshCentral;
 
 // ---- coverage ----
 function covColor(p){return p>=0.8?'var(--green)':p>=0.4?'var(--amber)':'var(--red)';}
@@ -583,8 +601,29 @@ document.querySelectorAll('#volmode button').forEach(b=>b.onclick=()=>{document.
 const tf={hosp:'',cat:'',alert:'',q:''};let tsort={key:'eff',dir:-1};
 const tfcat=document.getElementById('tfcat');
 const tfh=document.getElementById('tfhosp');
-const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['valor','Peso'],['edit','']];
-function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;if(k==='valor')return r.valor;if(k==='cat')return r._ecat||r.cat;if(k==='escopo')return r._eesc||r.escopo;return r[k];}
+const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['valor','Peso'],['cls','Classificação'],['llm','LLM'],['blk','Bloqueante'],['plan','Planning'],['edit','']];
+function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;if(k==='valor')return r.valor;if(k==='cat')return r._ecat||r.cat;if(k==='escopo')return r._eesc||r.escopo;
+ if(k==='cls'||k==='llm'||k==='blk')return ruleMeta(r._rid)[k]||'';
+ if(k==='plan'){const v=ruleMeta(r._rid).plan;return v?MES_ABREV.indexOf(v):-1;}
+ return r[k];}
+// célula leve: mostra o valor e só vira <select> ao clicar (evita milhares de selects no DOM)
+const RM_OPTS={cls:null,llm:null,blk:null,plan:null};
+function rmOpts(field){if(field==='cls')return RM_CLS;if(field==='plan')return MES_ABREV;return RM_SN;}
+function rmSel(rid,field,opts,cur,cls){
+ return '<span class="rm-cell'+(cls?' '+cls:'')+(cur?' set':'')+'" data-rid="'+esc(rid)+'" data-f="'+field+'">'+(cur?esc(cur):'—')+'</span>';}
+function rmOpenEditor(span){
+ if(span.querySelector('select'))return;
+ const rid=span.dataset.rid,field=span.dataset.f,cur=ruleMeta(rid)[field]||'';
+ const sel=document.createElement('select');sel.className='rm-sel'+(span.classList.contains('wide')?' wide':'');
+ sel.innerHTML='<option value="">—</option>'+rmOpts(field).map(o=>'<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>').join('');
+ const prev=span.innerHTML;span.innerHTML='';span.appendChild(sel);sel.focus();
+ let done=false;
+ const close=(v)=>{if(done)return;done=true;
+  if(v!==undefined&&v!==cur){wRuleMeta(rid,field,v);span.className='rm-cell'+(span.classList.contains('wide')?' wide':'')+(v?' set':'');span.innerHTML=v?esc(v):'—';}
+  else span.innerHTML=prev;};
+ sel.onchange=()=>close(sel.value);
+ sel.onblur=()=>close(undefined);
+ sel.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close(undefined);}};}
 function populateCatFilter(){if(typeof tfcat==='undefined'||!tfcat)return;const cur=tf.cat;tfcat.innerHTML='<option value="">Todas as categorias</option>';
  catOrder().forEach(c=>{const o=el('option');o.value=c;o.textContent=catLabel(c);if(c===cur)o.selected=true;tfcat.appendChild(o);});}
 function buildTodas(){populateCatFilter();
@@ -601,10 +640,15 @@ function buildTodas(){populateCatFilter();
    <td class="num">${r.gen.toLocaleString('pt-BR')}</td><td class="num">${r.res.toLocaleString('pt-BR')}</td>
    <td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td>
    <td class="num">${pct(r.valor/GV,2)}</td>
+   <td class="rmcol">${rmSel(r._rid,'cls',RM_CLS,ruleMeta(r._rid).cls,'wide')}</td>
+   <td class="rmcol">${rmSel(r._rid,'llm',RM_SN,ruleMeta(r._rid).llm)}</td>
+   <td class="rmcol">${rmSel(r._rid,'blk',RM_SN,ruleMeta(r._rid).blk)}</td>
+   <td class="rmcol">${rmSel(r._rid,'plan',MES_ABREV,ruleMeta(r._rid).plan)}</td>
    <td class="rededit-cell"><span class="rule-edit${moved?' moved':''}" data-rid="${esc(r._rid)}" data-curkey="${esc(ek).replace(/"/g,'&quot;')}" title="${moved?'Escopo reatribuído — clique para alterar':'Reatribuir escopo'}">✎</span></td></tr>`;}).join('')+'</tbody>';
  t.innerHTML=head+body;
  t.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(k==='edit')return;if(tsort.key===k)tsort.dir*=-1;else{tsort.key=k;tsort.dir=(k==='cod'||k==='desc'||k==='cat'||k==='escopo'||k==='hosp'||k==='op')?1:-1;}buildTodas();});
  t.querySelectorAll('.rule-edit[data-rid]').forEach(pe=>pe.onclick=e=>{e.stopPropagation();openScopeEditor(pe.dataset.rid,pe,pe.dataset.curkey,globalScopeOptionsHtml(pe.dataset.curkey));});
+ t.querySelectorAll('span.rm-cell').forEach(sp=>sp.onclick=e=>{e.stopPropagation();rmOpenEditor(sp);});
  document.getElementById('todas-hint').textContent=`${rows.length} regras${rows.length>1500?' (exibindo 1500)':''}`;}
 document.getElementById('tsearch').oninput=e=>{tf.q=e.target.value.trim().toLowerCase();buildTodas();};
 tfh.onchange=e=>{tf.hosp=e.target.value;buildTodas();};tfcat.onchange=e=>{tf.cat=e.target.value;buildTodas();};
@@ -635,7 +679,7 @@ function monthOptions(){
  const ini=MES_ABREV.indexOf(MONTHS[0]);
  antes.sort((x,y)=>((MES_ABREV.indexOf(x)-ini+12)%12)-((MES_ABREV.indexOf(y)-ini+12)%12));
  return antes.concat(set);}
-function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},ruleMap:{},addScopes:[],addCats:[],catRename:{},scopeRename:{},delScopes:{},delCats:{},tabs:{},plano:{monthsH:{}}};}
+function emptyShared(){return {geralOv:{},geralEscVal:{},attShare:{},ruleMap:{},ruleMeta:{},addScopes:[],addCats:[],catRename:{},scopeRename:{},delScopes:{},delCats:{},tabs:{},plano:{monthsH:{}}};}
 const PENDING_CAT='Pendente Agrupamento';
 let SHARED=emptyShared();
 function loadUI(){let d={active:'geral',planoFilter:{'Essencial':true,'Avançado':true},planoMode:'presenca',planoGen:false,escSumMode:'abs',planoSumMode:'abs',planoSumFilter:{'Essencial':true,'Avançado':true}};
@@ -681,6 +725,7 @@ function startSync(){
   DB.ref('tabs').on('value',s=>{SHARED.tabs=decodeTabs(s.val());renderActive();},fbReadErr);
   DB.ref('plano/monthsH').on('value',s=>{SHARED.plano.monthsH=decodeFlat(s.val());renderActive();},fbReadErr);
   DB.ref('geral/ruleMap').on('value',s=>{SHARED.ruleMap=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
+  DB.ref('geral/ruleMeta').on('value',s=>{SHARED.ruleMeta=decodeFlat(s.val());rerenderVisible();},fbReadErr);
   DB.ref('geral/addScopes').on('value',s=>{SHARED.addScopes=listVals(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('geral/addCats').on('value',s=>{SHARED.addCats=listVals(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
   DB.ref('geral/catRename').on('value',s=>{SHARED.catRename=decodeFlat(s.val());rebuildDerived();rerenderVisible();},fbReadErr);
@@ -703,6 +748,16 @@ function wTabEscVal(tab,key,val){const t=SHARED.tabs[tab];if(!t)return;t.escVal=
 function wAttShare(attId,val){SHARED.attShare[attId]=val;
  if(HAVE_FB)DB.ref('geral/attShare/'+attId).set(val).catch(fbErr);else persistSharedLocal();}
 // reatribuição de regra → escopo, GLOBAL (afeta todas as visões). rid = hosp||cod
+// ---- metadados editáveis da regra (Classificação, LLM, Bloqueante, Planning) ----
+const RM_CLS=['Sugestão Inclusão','Sugestão Exclusão','Automático Inclusão','Automático Exclusão','Atualização Item','Alerta Negativo','Alerta Positivo','Alerta Recomendação'];
+const RM_SN=['Sim','Não'];
+function ruleMeta(rid){return (SHARED.ruleMeta&&SHARED.ruleMeta[rid])||{};}
+function wRuleMeta(rid,field,val){SHARED.ruleMeta=SHARED.ruleMeta||{};
+ const cur=Object.assign({},SHARED.ruleMeta[rid]||{});
+ if(val)cur[field]=val;else delete cur[field];
+ if(Object.keys(cur).length)SHARED.ruleMeta[rid]=cur;else delete SHARED.ruleMeta[rid];
+ if(HAVE_FB)DB.ref('geral/ruleMeta/'+encK(rid)).set(Object.keys(cur).length?cur:null).catch(fbErr);else persistSharedLocal();
+ const tp=document.getElementById('tab-plano');if(tp&&tp.style.display!=='none')renderPlano();}
 function wRuleMapGlobal(rid,scopeKey){SHARED.ruleMap=SHARED.ruleMap||{};
  const r=RULEBYID[rid];const base=r?(r.cat+'||'+r.escopo):null;const store=(scopeKey&&scopeKey!==base)?scopeKey:null;
  if(store)SHARED.ruleMap[rid]=store;else delete SHARED.ruleMap[rid];
@@ -760,7 +815,9 @@ function rebuildDerived(){
  const gen={},ops={},counts={},cov={};
  DATA.rules.forEach(r=>{const e=effCatEsc(r);r._ecat=e.cat;r._eesc=e.escopo;r._ekey=e.key;const cat=e.cat,s=e.escopo,op=r.op,h=r.hosp;
   (counts[cat]=counts[cat]||{});counts[cat][h]=(counts[cat][h]||0)+1;
-  const tree=op?(isNonHosp(h)?null:(ops[op]=ops[op]||{})):gen;if(!tree)return;const co=tree[cat]=tree[cat]||{};(co[s]=co[s]||[]).push(r);
+  if(op&&isNonHosp(h))return;
+  const co=gen[cat]=gen[cat]||{};(co[s]=co[s]||[]).push(r);
+  if(op){const oo=ops[op]=ops[op]||{};const c2=oo[cat]=oo[cat]||{};(c2[s]=c2[s]||[]).push(r);}
   const cc=cov[cat]=cov[cat]||{sc:{},w:{},hosp:{}};cc.sc[s]=true;cc.w[s]=(cc.w[s]||0)+(r.gen||0);
   const hh=cc.hosp[h]=cc.hosp[h]||{};const st=hh[s]=hh[s]||{gen:0,res:0,n:0};st.gen+=r.gen;st.res+=r.res;st.n++;});
  const categories=[];const CO=catOrder();
@@ -774,7 +831,7 @@ function rebuildDerived(){
  DATA.general=gen;DATA.operators=ops;DATA.counts=counts;DATA.coverage={categories};AGGCACHE={};LEADREF=null;}
 // re-renderiza a aba visível após uma edição de escopo
 function rerenderVisible(){const vis=id=>{const e=document.getElementById('tab-'+id);return e&&e.style.display!=='none';};
- if(vis('central'))refreshCentral();if(vis('operadoras'))refreshOps();if(vis('cobertura'))refreshCov();
+ if(vis('central'))refreshCentral();if(vis('cobertura'))refreshCov();
  if(vis('volume'))buildVol();if(vis('todas'))buildTodas();if(vis('escopos'))renderEscopos();if(vis('plano'))renderPlano();}
 // opções de escopo (catálogo global) para o seletor de reatribuição
 function globalScopeOptionsHtml(curKey){const byCat={};allScopes().forEach(s=>{(byCat[s.cat]=byCat[s.cat]||[]).push(s);});
@@ -840,42 +897,37 @@ function compTip(a){const entries=Object.entries(a.comp||{}).sort((x,y)=>y[1]-x[
 function showModal(html){document.getElementById('modal-box').innerHTML=html;document.getElementById('modal').style.display='flex';}
 function closeModal(){document.getElementById('modal').style.display='none';}
 
-// ---- aplicabilidade por (atendimento, escopo): 'Aplicável' / 'NA' (binário) ----
-function baseAppl(att,key){const m=DATA.geralMatrix[att];return !!(m&&m[key]!=null);}
-function curAppl(id,att,key){
- if(id==='geral'){const ov=SHARED.geralOv[att]&&SHARED.geralOv[att][key];if(ov!=null)return ov!=='NA';return baseAppl(att,key);}
- const c=SHARED.tabs[id];const ov=c&&c.ov[att]&&c.ov[att][key];if(ov!=null)return ov!=='NA';return curAppl('geral',att,key);}
-function cycleAppl(id,att,key){const cur=curAppl(id,att,key);const val=cur?'NA':'Aplicável';
- if(id==='geral')wGeralAppl(att,key,val);else wTabAppl(id,att,key,val);
- const eff=(val!=='NA');const chips=document.querySelectorAll('#mxwrap .apcell[data-att]');
- for(let i=0;i<chips.length;i++){const c=chips[i];if(c.dataset.att===att&&c.dataset.key===key){c.innerHTML=applMark(eff);break;}}
- if(id!=='geral')refreshSummaryInline(id);}
-function applMark(has){return has?'<span class="chk-ok" title="Aplicável">✔</span>':'<span class="chk-no" title="NA">✘</span>';}
-
-// ---- Validação (coluna única por escopo): Essencial / Avançado / NA ----
-function escDisplayTier(t){return t==='Completo'?'Avançado':t;}
-const ESC_TIERS=['Essencial','Avançado'];
-// tier padrão do escopo, derivado da classificação existente (geralMatrix): Essencial vence Avançado/Completo
-let ESC_TIER_BASE=null;
-function buildEscTierBase(){ESC_TIER_BASE={};for(const att in DATA.geralMatrix){const m=DATA.geralMatrix[att];for(const key in m){const t=m[key];if(t==null)continue;const cur=ESC_TIER_BASE[key];if(t==='Essencial'||cur==null)ESC_TIER_BASE[key]=(t==='Essencial')?'Essencial':(cur==='Essencial'?'Essencial':'Avançado');}}}
-function baseEscTier(key){if(!ESC_TIER_BASE)buildEscTierBase();return ESC_TIER_BASE[key]||null;}
-function curEscVal(id,key){
- if(id==='geral'){const v=SHARED.geralEscVal[key];if(v!=null)return v==='NA'?null:v;return baseEscTier(key);}
- const c=SHARED.tabs[id];const v=c&&c.escVal&&c.escVal[key];if(v!=null)return v==='NA'?null:v;return curEscVal('geral',key);}
-function cycleEscVal(id,key){const cur=curEscVal(id,key);const order=[null,'Essencial','Avançado'];const nxt=order[(order.indexOf(cur)+1)%3];const val=nxt===null?'NA':nxt;
- if(id==='geral')wGeralEscVal(key,val);else wTabEscVal(id,key,val);
- const chip=document.querySelector('#mxwrap .tchip[data-esckey="'+CSS.escape(key)+'"]');
- if(chip){const eff=val==='NA'?null:val;chip.className='tchip '+tierCls(eff);chip.textContent=tierAbbr(eff);chip.title=eff||'não aplicável';}
+// ---- operadoras por aba (a aba nasce com uma operadora "Geral") ----
+const OP_GERAL={id:'op_geral',name:'Geral'};
+function viewOps(id){const c=SHARED.tabs[id];const list=[OP_GERAL];
+ if(c&&c.addA)c.addA.forEach(a=>{if(!(c.delA&&c.delA[a.id]))list.push(a);});
+ return list;}
+function applMark(has){return has?'<span class="chk-ok" title="A regra vale para esta operadora">\u2714</span>':'<span class="chk-no" title="N\u00e3o vale para esta operadora">\u2718</span>';}
+// aplicabilidade REGRA x OPERADORA — default marcado
+function ruleAppl(id,opId,rid){const c=SHARED.tabs[id];const v=c&&c.ov&&c.ov[opId]&&c.ov[opId][rid];return v==null?true:(v!=='NA');}
+function cycleRuleAppl(id,opId,rid,cell){const cur=ruleAppl(id,opId,rid);const val=cur?'NA':'Aplic\u00e1vel';
+ wTabAppl(id,opId,rid,val);
+ if(cell)cell.innerHTML=applMark(!cur);
+ refreshScopeRow(id,cell);}
+// escopo x operadora = alguma regra do escopo marcada para a operadora
+function scopeOpMark(id,client,key,opId){const a=hospAgg(client)[key];const rules=(a&&a.rules)||[];
+ if(!rules.length)return null;
+ for(let i=0;i<rules.length;i++){if(ruleAppl(id,opId,rules[i]._rid))return true;}
+ return false;}
+function refreshScopeRow(id,cell){if(!cell)return;const c=SHARED.tabs[id];if(!c)return;
+ const rd=cell.closest('tr.rd-row');if(!rd)return;const key=rd.dataset.forkey;
+ const row=document.querySelector('#mxwrap tr[data-scoperow="'+CSS.escape(key)+'"]');if(!row)return;
+ row.querySelectorAll('td.opcell').forEach(td=>{const m=scopeOpMark(id,c.client,key,td.dataset.att);
+  td.innerHTML=(m===null)?'<span class="muted">\u2014</span>':applMark(m);});
  refreshSummaryInline(id);}
 
 function renderSubtabs(){const bar=document.getElementById('subtabs');let h='';
- h+=`<div class="subtab ${UI.active==='geral'?'active':''}" data-id="geral">Geral</div>`;
- tabsOrder().forEach(id=>{const c=SHARED.tabs[id];h+=`<div class="subtab ${UI.active===id?'active':''}" data-id="${id}"><span class="nm">${esc(c.name)}</span><span class="x" data-del="${id}" title="excluir">✕</span></div>`;});
- h+=`<button class="subtab-add" id="subtab-add" title="Adicionar visão de cliente">+</button>`;bar.innerHTML=h;
+ tabsOrder().forEach(id=>{const c=SHARED.tabs[id];h+=`<div class="subtab ${UI.active===id?'active':''}" data-id="${id}"><span class="nm">${esc(c.name)}</span><span class="x" data-del="${id}" title="excluir">\u2715</span></div>`;});
+ h+=`<button class="subtab-add" id="subtab-add" title="Adicionar vis\u00e3o de cliente">+</button>`;bar.innerHTML=h;
  bar.querySelectorAll('.subtab').forEach(el=>el.onclick=e=>{if(e.target.dataset.del)return;UI.active=el.dataset.id;saveUI();renderEscopos();});
- bar.querySelectorAll('.x[data-del]').forEach(el=>el.onclick=e=>{e.stopPropagation();if(confirm('Excluir esta visão? (para todos os usuários)')){const id=el.dataset.del;if(UI.active===id){UI.active='geral';saveUI();}wDelTab(id);}});
+ bar.querySelectorAll('.x[data-del]').forEach(el=>el.onclick=e=>{e.stopPropagation();if(confirm('Excluir esta vis\u00e3o? (para todos os usu\u00e1rios)')){const id=el.dataset.del;if(UI.active===id){UI.active='';saveUI();}wDelTab(id);}});
  document.getElementById('subtab-add').onclick=openClientModal;
- bar.querySelectorAll('.subtab .nm').forEach(el=>el.ondblclick=e=>{e.stopPropagation();const id=el.parentElement.dataset.id;const n=prompt('Novo nome da visão:',SHARED.tabs[id].name);if(n)wRenameTab(id,n);});}
+ bar.querySelectorAll('.subtab .nm').forEach(el=>el.ondblclick=e=>{e.stopPropagation();const id=el.parentElement.dataset.id;const n=prompt('Novo nome da vis\u00e3o:',SHARED.tabs[id].name);if(n)wRenameTab(id,n);});}
 function openClientModal(){const opts=DATA.clients.map(c=>`<option value="${esc(c.hosp)}">${esc(c.label)}</option>`).join('');
  showModal(`<h3>Nova visão de cliente</h3><label>Cliente (base de regras ativa)</label><select id="m-client">${opts}</select><label>Nome da aba</label><input id="m-name" placeholder="ex.: HIAE — plano 2026">
   <div class="modal-actions"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" id="m-ok">Criar</button></div>`);
@@ -893,124 +945,92 @@ function viewScopes(id){const list=tabScopeList(id);
  const out=[];catOrder().forEach(cat=>{if(byCat[cat])out.push([cat,byCat[cat]]);});
  Object.keys(byCat).forEach(cat=>{if(catOrder().indexOf(cat)<0)out.push([cat,byCat[cat]]);});
  return out;}
-function viewAtts(id){const c=id==='geral'?null:SHARED.tabs[id];let list=DATA.attendance.filter(a=>!(c&&c.delA&&c.delA[a.id]));
- if(c&&c.addA)c.addA.forEach(a=>list.push(a));
- return list.slice().sort((a,b)=>(a.group==='Externo'?0:1)-(b.group==='Externo'?0:1));}
 function flatScopes(groups){const o=[];groups.forEach(([cat,scs])=>scs.forEach(s=>o.push(s)));return o;}
 
 function renderEscopos(){
  const _wx=window.scrollX,_wy=window.scrollY;
  renderSubtabs();
- const id=UI.active;const isGeral=id==='geral';const c=SHARED.tabs[id];
- if(!isGeral&&!c){UI.active='geral';saveUI();return renderEscopos();}
- const client=isGeral?null:c.client;const atts=viewAtts(id);const groups=viewScopes(id);const cont=document.getElementById('escopos-view');
+ const cont=document.getElementById('escopos-view');const ids=tabsOrder();
+ if(!ids.length){cont.innerHTML='<div class="empty">Nenhuma vis\u00e3o de cliente ainda. Use o <b>+</b> ao lado das abas para criar a primeira.</div>';return;}
+ let id=UI.active;if(!SHARED.tabs[id]){id=ids[0];UI.active=id;saveUI();renderSubtabs();}
+ const c=SHARED.tabs[id];const client=c.client;const ops=viewOps(id);const groups=viewScopes(id);
  let h='<div class="toolrow"><span class="fbstat" id="fb-status">'+fbBadge()+'</span>';
- if(isGeral)h+=`<span class="hint">Classificação global editável — <b>Validação</b> (E → A → —) e <b>aplicabilidade</b> por atendimento (✔ ↔ ✘). Sincroniza em tempo real. Duplo-clique no % do atendimento p/ editar.</span>`;
- else h+=`<span class="hint">Visão de <b>${esc(client)}</b> · marca ✔ do escopo = hospital já cobre (via regras). Clique no escopo p/ ver e reatribuir regras. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-att">+ Adicionar Atendimento</button>`;
+ h+=`<span class="hint">Vis\u00e3o de <b>${esc(client)}</b> \u00b7 \u2714 na coluna da operadora = ao menos uma regra do escopo vale para ela. Abra \u25b8 para marcar regra a regra. Duplo-clique no nome da aba p/ renomear.</span><button class="btn-sec" id="add-scope">+ Adicionar Escopo</button><button class="btn-sec" id="add-op">+ Adicionar Operadora</button>`;
  h+='</div>';
- if(!isGeral)h+='<div id="esc-summary">'+renderSummary(id,atts,groups,client)+'</div>';
- h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo</th><th class="valh">Validação</th>';
- const maxShare=Math.max.apply(null,DATA.attendance.map(x=>effShare(x)).concat([1]))||1;
- atts.forEach(a=>{const shv=effShare(a);const sh=shv>0?`<span class="att-share" data-share-att="${esc(a.id)}" title="duplo-clique para editar" style="${shareStyle(shv,maxShare)}">${shv}%</span>`:`<span class="att-share" data-share-att="${esc(a.id)}" title="duplo-clique para editar" style="color:var(--muted);background:#1c2537">novo</span>`;
-  h+=`<th class="att-h" data-att="${a.id}">${!isGeral?`<span class="att-del" data-dela="${a.id}" title="excluir atendimento">✕</span>`:''}${sh}<span class="att-name">${esc(a.name)}</span>${compTip(a)}</th>`;});
- h+='</tr></thead><tbody>';
- groups.forEach(([cat,scs])=>{h+=`<tr class="catrow"><td colspan="${atts.length+2}">${esc(catLabel(cat))}</td></tr>`;
-  scs.forEach(s=>{const has=isGeral?null:hospHasScope(client,s.key);
-   const mark=isGeral?'':(has?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>');
+ h+='<div id="esc-summary">'+renderSummary(id,ops,groups,client)+'</div>';
+ h+='<div class="mx-wrap" id="mxwrap"><table class="mx editable"><thead><tr><th class="corner rowh">Escopo</th>';
+ ops.forEach(a=>{h+=`<th class="att-h" data-att="${esc(a.id)}">${a.id!==OP_GERAL.id?`<span class="att-del" data-dela="${esc(a.id)}" title="excluir operadora">\u2715</span>`:''}<span class="att-name">${esc(a.name)}</span></th>`;});
+ h+='<th class="vt-h vt-first">Valor</th><th class="vt-h">Tempo</th></tr></thead><tbody>';
+ const ncols=ops.length+3;
+ groups.forEach(([cat,scs])=>{h+=`<tr class="catrow"><td colspan="${ncols}">${esc(catLabel(cat))}</td></tr>`;
+  scs.forEach(s=>{const has=hospHasScope(client,s.key);
+   const mark=has?'<span class="chk-ok">\u2714</span>':'<span class="chk-no">\u2718</span>';
    const op=s.op?`<span class="oplabel">${esc(s.op)}</span>`:'';
-   const del=isGeral?'':`<span class="del" data-dels="${esc(s.key)}" title="excluir linha">✕</span>`;
-   const drill=isGeral?'':`<span class="drill" data-drill="${esc(s.key)}" title="ver regras do escopo">▸</span>`;
-   h+=`<tr data-scoperow="${esc(s.key)}"><th class="rowh">${drill}${mark}${esc(s.escopo)}${op}${del}</th>`;
-   const vt=curEscVal(id,s.key);
-   h+=`<td class="valcol"><span class="tchip ${tierCls(vt)}" data-esckey="${esc(s.key)}" title="${vt||'não aplicável'}">${tierAbbr(vt)}</span></td>`;
-   atts.forEach(a=>{const ap=curAppl(id,a.id,s.key);
-    h+=`<td class="chkcol apcell" data-att="${esc(a.id)}" data-key="${esc(s.key)}">${applMark(ap)}</td>`;});
-   h+='</tr>';});});
- h+='</tbody></table></div>';const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
+   h+=`<tr data-scoperow="${esc(s.key)}"><th class="rowh"><span class="drill" data-drill="${esc(s.key)}" title="ver regras do escopo">\u25b8</span>${mark}${esc(s.escopo)}${op}<span class="del" data-dels="${esc(s.key)}" title="excluir linha">\u2715</span></th>`;
+   ops.forEach(a=>{const m=scopeOpMark(id,client,s.key,a.id);
+    h+=`<td class="chkcol opcell" data-att="${esc(a.id)}" data-key="${esc(s.key)}">${m===null?'<span class="muted">\u2014</span>':applMark(m)}</td>`;});
+   h+='<td class="vtcol vt-first"></td><td class="vtcol"></td></tr>';});});
+ h+='</tbody></table></div>';
+ const _mw=document.getElementById('mxwrap');const _st=_mw?_mw.scrollTop:0,_sl=_mw?_mw.scrollLeft:0;cont.innerHTML=h;
+ const _nw=document.getElementById('mxwrap');if(_nw){_nw.scrollTop=_st;_nw.scrollLeft=_sl;}
  window.scrollTo(_wx,_wy);
  if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){const w=document.getElementById('mxwrap');if(w){w.scrollTop=_st;w.scrollLeft=_sl;}window.scrollTo(_wx,_wy);});
- // handlers
- cont.querySelectorAll('.tchip[data-esckey]').forEach(el=>el.onclick=()=>cycleEscVal(id,el.dataset.esckey));
- cont.querySelectorAll('.apcell[data-att]').forEach(el=>el.onclick=()=>cycleAppl(id,el.dataset.att,el.dataset.key));
- cont.querySelectorAll('.att-share[data-share-att]').forEach(el=>el.ondblclick=e=>{e.stopPropagation();editShare(el);});
- if(!isGeral){document.getElementById('add-scope').onclick=()=>openAddScope(id);document.getElementById('add-att').onclick=()=>openAddAtt(id);
-  cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelScope(id,el.dataset.dels);});
-  cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelAtt(id,el.dataset.dela);});
-  cont.querySelectorAll('.drill[data-drill]').forEach(el=>el.onclick=e=>{e.stopPropagation();toggleDrill(id,el.dataset.drill,el);});
-  attachSummaryHandlers(id);}}
+ document.getElementById('add-scope').onclick=()=>openAddScope(id);
+ document.getElementById('add-op').onclick=()=>openAddOperadora(id);
+ cont.querySelectorAll('.del[data-dels]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelScope(id,el.dataset.dels);});
+ cont.querySelectorAll('[data-dela]').forEach(el=>el.onclick=e=>{e.stopPropagation();wDelAtt(id,el.dataset.dela);});
+ cont.querySelectorAll('.drill[data-drill]').forEach(el=>el.onclick=e=>{e.stopPropagation();toggleDrill(id,el.dataset.drill,el);});
+ attachSummaryHandlers(id);}
 
-// edição inline do % de faturamento
-function editShare(el){const attId=el.dataset.shareAtt;const cur=el.textContent.replace('%','').replace('novo','').trim();
- const inp=document.createElement('input');inp.type='number';inp.step='0.1';inp.value=cur||'';
- inp.style.cssText='width:56px;background:#0b1120;border:1px solid var(--accent);color:var(--txt);border-radius:6px;padding:1px 4px;font-size:11px;font-weight:800';
- el.replaceWith(inp);inp.focus();inp.select();
- const commit=()=>{let v=parseFloat(inp.value);if(isNaN(v)||v<0)v=0;wAttShare(attId,Math.round(v*10)/10);renderEscopos();};
- inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){renderEscopos();}};
- inp.onblur=commit;}
-
-// drill-down COMPACTO (ancorado à esquerda): regras que compõem o escopo no hospital + lápis p/ reatribuir
-function toggleDrill(id,key,caret){const client=SHARED.tabs[id].client;
+// drill-down: regras do escopo + marca\u00e7\u00e3o por operadora
+function toggleDrill(id,key,caret){const c=SHARED.tabs[id];if(!c)return;const client=c.client;
  const row=document.querySelector('#mxwrap tr[data-scoperow="'+CSS.escape(key)+'"]');if(!row)return;
  const nxt=row.nextElementSibling;
  if(nxt&&nxt.classList.contains('rd-row')){nxt.remove();caret.classList.remove('open');return;}
- // fecha qualquer outro drill aberto
  document.querySelectorAll('#mxwrap tr.rd-row').forEach(r=>r.remove());
  document.querySelectorAll('#mxwrap .drill.open').forEach(d=>d.classList.remove('open'));
  caret.classList.add('open');
- const agg=hospAgg(client)[key];const rules=(agg&&agg.rules)||[];
- const ncols=(viewAtts(id).length)+2;
- let inner='<div class="rd-box"><div class="rd-title">'+rules.length+' regra'+(rules.length===1?'':'s')+' · '+esc(client)+'</div>';
- if(!rules.length)inner+='<div class="rd-empty">Nenhuma regra neste escopo aqui. Abra o escopo de origem e use o lápis (✎) para trazer regras para cá.</div>';
- else{inner+='<ul class="rd-list">';
+ const ops=viewOps(id);const agg=hospAgg(client)[key];const rules=(agg&&agg.rules)||[];
+ const ncols=ops.length+3;
+ let inner='<div class="rd-box"><div class="rd-title">'+rules.length+' regra'+(rules.length===1?'':'s')+' \u00b7 '+esc(client)+'</div>';
+ if(!rules.length)inner+='<div class="rd-empty">Nenhuma regra neste escopo aqui. Abra o escopo de origem e use o l\u00e1pis (\u270e) para trazer regras para c\u00e1.</div>';
+ else{inner+='<table class="rd-tbl"><thead><tr><th>C\u00f3digo</th><th>Descri\u00e7\u00e3o</th><th class="num">Alertas</th><th class="num">Efet.</th>';
+  ops.forEach(a=>inner+='<th class="chkcol">'+esc(a.name)+'</th>');
+  inner+='<th></th></tr></thead><tbody>';
   rules.forEach(r=>{const e=effVal(r.gen,r.res);const ek=effKeyR(r);const moved=SHARED.ruleMap&&SHARED.ruleMap[r._rid];
-   inner+='<li><div class="rd-line"><span class="code" title="'+esc(r.cod)+'">'+esc(r.cod)+'</span>'
-     +'<span class="rule-edit'+(moved?' moved':'')+'" data-rid="'+esc(r._rid)+'" data-curkey="'+esc(ek).replace(/"/g,'&quot;')+'" title="Reatribuir escopo">✎</span></div>'
-     +'<div class="rd-desc">'+esc(r.desc)+'</div>'
-     +'<div class="rd-meta">'+r.gen.toLocaleString('pt-BR')+' alertas · efet '+(e==null?'—':pct(e))+'</div></li>';});
-  inner+='</ul>';}
+   inner+='<tr><td class="code">'+esc(r.cod)+'</td><td class="rd-desc">'+esc(r.desc)+'</td>'
+     +'<td class="num muted">'+r.gen.toLocaleString('pt-BR')+'</td>'
+     +'<td class="num" style="color:'+effColor(e)+';font-weight:700">'+(e==null?'\u2014':pct(e))+'</td>';
+   ops.forEach(a=>{inner+='<td class="chkcol rulechk" data-op="'+esc(a.id)+'" data-rid="'+esc(r._rid)+'">'+applMark(ruleAppl(id,a.id,r._rid))+'</td>';});
+   inner+='<td><span class="rule-edit'+(moved?' moved':'')+'" data-rid="'+esc(r._rid)+'" data-curkey="'+esc(ek).replace(/"/g,'&quot;')+'" title="Reatribuir escopo">\u270e</span></td></tr>';});
+  inner+='</tbody></table>';}
  inner+='</div>';
- const tr=document.createElement('tr');tr.className='rd-row';tr.innerHTML='<td colspan="'+ncols+'">'+inner+'</td>';
+ const tr=document.createElement('tr');tr.className='rd-row';tr.dataset.forkey=key;tr.innerHTML='<td colspan="'+ncols+'">'+inner+'</td>';
  row.after(tr);
+ tr.querySelectorAll('.rulechk[data-rid]').forEach(td=>td.onclick=e=>{e.stopPropagation();cycleRuleAppl(id,td.dataset.op,td.dataset.rid,td);});
  tr.querySelectorAll('.rule-edit[data-rid]').forEach(p=>p.onclick=e=>{e.stopPropagation();openScopeEditor(p.dataset.rid,p,p.dataset.curkey,globalScopeOptionsHtml(p.dataset.curkey));});}
 
 function refreshSummaryInline(id){if(id==='geral')return;const c=SHARED.tabs[id];if(!c)return;
  const box=document.getElementById('esc-summary');if(!box)return;
- box.innerHTML=renderSummary(id,viewAtts(id),viewScopes(id),c.client);attachSummaryHandlers(id);}
+ box.innerHTML=renderSummary(id,viewOps(id),viewScopes(id),c.client);attachSummaryHandlers(id);}
 function heatBg(p){let r,g,b;if(p<0.5){const k=p/0.5;r=239+(245-239)*k;g=68+(158-68)*k;b=68+(11-68)*k;}else{const k=(p-0.5)/0.5;r=245+(34-245)*k;g=158+(197-158)*k;b=11+(94-11)*k;}return 'rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+',0.30)';}
 function heatFg(p){return p>=0.6?'#9bf0ba':p>=0.3?'#f8d977':'#ffa3a3';}
 function covCellHtml(have,tot,mode,bold){if(tot===0)return '<td style="color:var(--muted)">—</td>';
  const p=have/tot;const val=mode==='pct'?Math.round(p*100)+'%':have+'/'+tot;
  return '<td style="background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:'+(bold?800:700)+'" title="'+have+' de '+tot+' escopos">'+val+'</td>';}
-function renderSummary(id,atts,groups,client){
+function renderSummary(id,ops,groups,client){
  const mode=UI.escSumMode||'abs';const scopes=flatScopes(groups);
- // penetração global = escopos com check / total de escopos
  let gHave=0;scopes.forEach(s=>{if(hospHasScope(client,s.key))gHave++;});const gTot=scopes.length;
  const pen=gTot?Math.round(gHave/gTot*100):0;const pcol=pen>=80?'var(--green)':pen>=40?'var(--amber)':'var(--red)';
- let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div>'
-  +`<span class="pencard" title="Escopos cobertos ÷ total de escopos"><b style="color:${pcol}">${pen}%</b> penetração <span class="mono-sm">(${gHave}/${gTot} escopos)</span></span></div>`;
- // ---- Tabela 1: Validação × tipo de atendimento ----
- h+='<div class="mono-sm" style="margin:2px 0 4px">Cobertura por tipo de atendimento</div>';
- h+='<div class="mx-wrap" style="max-height:none;margin-bottom:16px"><table class="sumtable"><thead><tr><th class="rh">Validação</th><th class="ttcol" title="Total da tabela — todos os tipos de conta somados">TT</th>';
- atts.forEach(a=>h+=`<th>${esc(a.name)}</th>`);h+='</tr></thead><tbody>';
- const rowsT1=ESC_TIERS.concat(['Total']);
- rowsT1.forEach(tier=>{let cells='',ttHave=0,ttTot=0;
-  atts.forEach(a=>{let tot=0,have=0;scopes.forEach(s=>{if(!curAppl(id,a.id,s.key))return;const vt=escDisplayTier(curEscVal(id,s.key));
-    if(tier==='Total'||vt===tier){tot++;if(hospHasScope(client,s.key))have++;}});
-   ttHave+=have;ttTot+=tot;cells+=covCellHtml(have,tot,mode,false);});
-  const label=tier==='Total'?'<b>Total</b>':`<span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}`;
-  h+=`<tr><td class="rh">${label}</td>`+covCellHtml(ttHave,ttTot,mode,true)+cells+'</tr>';});
- h+='</tbody></table></div>';
- // ---- Tabela 2: Validação × categoria de escopo ----
+ let h='<div class="toolrow" style="margin-bottom:10px"><span class="tglabel">Resumo:</span><div class="toggle" id="esc-sum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">N\u00ba absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button></div>'
+  +`<span class="pencard" title="Escopos cobertos \u00f7 total de escopos"><b style="color:${pcol}">${pen}%</b> penetra\u00e7\u00e3o <span class="mono-sm">(${gHave}/${gTot} escopos)</span></span></div>`;
  h+='<div class="mono-sm" style="margin:2px 0 4px">Cobertura por categoria de escopo</div>';
- h+='<div class="mx-wrap" style="max-height:none;margin-bottom:6px"><table class="sumtable"><thead><tr><th class="rh">Validação</th><th class="ttcol" title="Total de todas as categorias">TT</th>';
- groups.forEach(([cat])=>h+=`<th>${esc(catLabel(cat))}</th>`);h+='</tr></thead><tbody>';
- rowsT1.forEach(tier=>{let cells='',ttHave=0,ttTot=0;
-  groups.forEach(([cat,scs])=>{let tot=0,have=0;scs.forEach(s=>{const vt=escDisplayTier(curEscVal(id,s.key));
-    if(tier==='Total'||vt===tier){tot++;if(hospHasScope(client,s.key))have++;}});
-   ttHave+=have;ttTot+=tot;cells+=covCellHtml(have,tot,mode,false);});
-  const label=tier==='Total'?'<b>Total</b>':`<span class="tchip ${tierCls(tier)}">${tierAbbr(tier)}</span> ${tier}`;
-  h+=`<tr><td class="rh">${label}</td>`+covCellHtml(ttHave,ttTot,mode,true)+cells+'</tr>';});
- h+='</tbody></table></div>';
+ h+='<div class="mx-wrap" style="max-height:none;margin-bottom:6px"><table class="sumtable"><thead><tr><th class="rh">Cobertura</th><th class="ttcol" title="Total de todas as categorias">TT</th>';
+ groups.forEach(([cat])=>h+=`<th>${esc(catLabel(cat))}</th>`);h+='</tr></thead><tbody><tr><td class="rh"><b>Escopos cobertos</b></td>';
+ let ttHave=0,ttTot=0,cells='';
+ groups.forEach(([cat,scs])=>{let tot=0,have=0;scs.forEach(s=>{tot++;if(hospHasScope(client,s.key))have++;});
+  ttHave+=have;ttTot+=tot;cells+=covCellHtml(have,tot,mode,false);});
+ h+=covCellHtml(ttHave,ttTot,mode,true)+cells+'</tr></tbody></table></div>';
  return h;}
 function attachSummaryHandlers(id){const box=document.getElementById('esc-summary');if(!box)return;
  box.querySelectorAll('#esc-sum-mode button').forEach(b=>b.onclick=()=>{UI.escSumMode=b.dataset.m;saveUI();refreshSummaryInline(id);});}
@@ -1033,127 +1053,63 @@ function openCatManager(){let rows=catOrder().map(c=>{const isNew=DATA.cat_order
   <div class="modal-actions"><button class="btn-sec" onclick="closeModal()">Fechar</button><button class="btn-primary" id="cat-save">Salvar renomeações</button></div>`);
  document.getElementById('cat-add').onclick=()=>{const n=document.getElementById('cat-new').value.trim();if(!n){alert('Digite o nome da categoria');return;}wAddCat(n);closeModal();};
  document.getElementById('cat-save').onclick=()=>{document.querySelectorAll('#cat-list .cat-ren').forEach(inp=>{const raw=inp.dataset.raw;const val=inp.value.trim();if(val&&val!==catLabel(raw))wRenameCat(raw,val);else if(!val)0;});closeModal();};}
-function openAddAtt(id){showModal(`<h3>Adicionar tipo de atendimento</h3><label>Descrição *</label><input id="a-name" placeholder="ex.: Centro de Partos"><label>Grupo *</label><select id="a-grp"><option>Externo</option><option>Internação</option></select>
+function openAddOperadora(id){showModal(`<h3>Adicionar operadora</h3><label>Nome da operadora *</label><input id="a-name" placeholder="ex.: Bradesco Sa\u00fade">
   <div class="modal-actions"><button class="btn-sec" onclick="closeModal()">Cancelar</button><button class="btn-primary" id="a-ok">Adicionar</button></div>`);
- document.getElementById('a-ok').onclick=()=>{const name=document.getElementById('a-name').value.trim();const grp=document.getElementById('a-grp').value;
-  if(!name){alert('Descrição é obrigatória');return;}wAddAtt(id,{name:name,group:grp});closeModal();};}
+ document.getElementById('a-ok').onclick=()=>{const name=document.getElementById('a-name').value.trim();
+  if(!name){alert('Nome \u00e9 obrigat\u00f3rio');return;}wAddAtt(id,{name:name,group:'Operadora'});closeModal();};}
 
 // ======================= PLANO DE VIRADA =======================
 function buildScopeStats(){/* mantido por compatibilidade — stats agora vêm de hospAgg */}
 function scopeInfo(key){let s=allScopes().find(x=>x.key===key);if(s)return {key,cat:s.cat,escopo:scopeLabel(key,s.escopo),op:s.op||''};
  for(const id in SHARED.tabs){const f=(SHARED.tabs[id].addS||[]).find(x=>x.key===key);if(f)return {key,cat:f.cat,escopo:scopeLabel(key,f.escopo),op:f.op||''};}
  const b=parseCatEsc(key);return {key,cat:b.cat,escopo:scopeLabel(key,b.escopo),op:b.op};}
-function planoAtts(){const list=DATA.attendance.slice();const seen={};list.forEach(a=>seen[a.id]=1);
- tabsOrder().forEach(id=>(SHARED.tabs[id].addA||[]).forEach(a=>{if(!seen[a.id]){seen[a.id]=1;list.push(a);}}));return list;}
-// escopos aplicáveis a um atendimento, no contexto de um hospital (aba do hospital ou geral)
-function applicableScopes(hosp,attId){const tabId=hospTabId(hosp)||'geral';const list=tabScopeList(tabId==='geral'?'geral':tabId);
- return list.filter(s=>curAppl(tabId,attId,s.key));}
-
-function renderPlanoSummary(){
- const tabs=tabsOrder();const mode=UI.planoSumMode||'abs';const f=UI.planoSumFilter||{'Essencial':true,'Avançado':true};
- let h='<div class="section-title" style="font-size:15px;margin-bottom:8px">Resumo de cobertura por hospital</div>';
- h+='<div class="toolrow" style="margin-bottom:8px"><span class="tglabel">Métrica:</span><div class="toggle" id="psum-mode"><button class="'+(mode==='abs'?'active':'')+'" data-m="abs">Nº absoluto</button><button class="'+(mode==='pct'?'active':'')+'" data-m="pct">Percentual</button><button class="'+(mode==='eff'?'active':'')+'" data-m="eff">Efetividade</button></div><span class="tglabel" style="margin-left:8px">Tiers:</span>';
- TIERS.forEach(tr=>h+='<span class="mchip '+(f[tr]?'on':'')+'" data-psf="'+tr+'">'+tr+'</span>');
- h+='</div>';
- if(!tabs.length){h+='<div class="empty">Crie visões de cliente na aba Análise Escopos para popular este resumo.</div>';return h+'<hr style="border:none;border-top:1px solid var(--line);margin:18px 0">';}
- const cellPS=(have,tot,gen,res)=>{let val,style;
-  if(mode==='eff'){const e=gen>0?res/gen:null;if(e==null){val='—';style='color:var(--muted)';}else{val=Math.round(e*100)+'%';style='background:'+heatBg(e)+';color:'+heatFg(e)+';font-weight:700';}}
-  else{const p=tot?have/tot:0;if(tot===0){val='—';style='color:var(--muted)';}else{val=(mode==='pct'?Math.round(p*100)+'%':have+'/'+tot);style='background:'+heatBg(p)+';color:'+heatFg(p)+';font-weight:700';}}
-  return '<td style="'+style+'" title="'+(mode==='eff'?res+' resolvidos / '+gen+' alertas':have+' de '+tot+' escopos')+'">'+val+'</td>';};
- // ---- Tabela A: tipos de atendimento × hospitais (+ Total) ----
- h+='<div class="mono-sm" style="margin:2px 0 4px">Por tipo de atendimento</div>';
- h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th>';
- tabs.forEach(id=>h+=`<th>${esc(SHARED.tabs[id].name)}</th>`);h+='<th class="ttcol">Total</th></tr></thead><tbody>';
- planoAtts().forEach(a=>{h+=`<tr><td class="rh">${esc(a.name)}</td>`;
-  let rTot=0,rHave=0,rGen=0,rRes=0;
-  tabs.forEach(id=>{const tab=SHARED.tabs[id];const H=tab.client;
-   if(tab.delA&&tab.delA[a.id]){h+='<td style="color:var(--muted);font-weight:700">NA</td>';return;}
-   let tot=0,have=0,gen=0,res=0;
-   tabScopeList(id).forEach(s=>{if(!curAppl(id,a.id,s.key))return;const vt=escDisplayTier(curEscVal(id,s.key));if(!(vt&&f[vt]))return;
-    tot++;if(hospHasScope(H,s.key))have++;const st=hospScopeStat(H,s.key);gen+=st.gen;res+=st.res;});
-   rTot+=tot;rHave+=have;rGen+=gen;rRes+=res;h+=cellPS(have,tot,gen,res);});
-  h+=cellPS(rHave,rTot,rGen,rRes).replace('<td ','<td class="ttcol" ');h+='</tr>';});
- h+='</tbody></table></div>';
- // ---- Tabela B: categorias de escopo × hospitais (+ linha e coluna Total) ----
- h+='<div class="mono-sm" style="margin:2px 0 4px">Por categoria de escopo</div>';
- h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Categoria de escopo</th>';
- tabs.forEach(id=>h+=`<th>${esc(SHARED.tabs[id].name)}</th>`);h+='<th class="ttcol">Total</th></tr></thead><tbody>';
- const catAgg={};catOrder().forEach(c=>catAgg[c]=1);
- const colTot={},colHave={},colGen={},colRes={};tabs.forEach(id=>{colTot[id]=0;colHave[id]=0;colGen[id]=0;colRes[id]=0;});
- let gT=0,gH=0,gG=0,gR=0;
- catOrder().forEach(cat=>{h+=`<tr><td class="rh">${esc(catLabel(cat))}</td>`;let rTot=0,rHave=0,rGen=0,rRes=0;
-  tabs.forEach(id=>{const H=SHARED.tabs[id].client;let tot=0,have=0,gen=0,res=0;
-   tabScopeList(id).filter(s=>s.cat===cat).forEach(s=>{const vt=escDisplayTier(curEscVal(id,s.key));if(!(vt&&f[vt]))return;
-    tot++;if(hospHasScope(H,s.key))have++;const st=hospScopeStat(H,s.key);gen+=st.gen;res+=st.res;});
-   colTot[id]+=tot;colHave[id]+=have;colGen[id]+=gen;colRes[id]+=res;
-   rTot+=tot;rHave+=have;rGen+=gen;rRes+=res;h+=cellPS(have,tot,gen,res);});
-  gT+=rTot;gH+=rHave;gG+=rGen;gR+=rRes;h+=cellPS(rHave,rTot,rGen,rRes).replace('<td ','<td class="ttcol" ');h+='</tr>';});
- h+=`<tr style="background:var(--panel2)"><td class="rh"><b>Total</b></td>`;
- tabs.forEach(id=>h+=cellPS(colHave[id],colTot[id],colGen[id],colRes[id]).replace('<td ','<td style="font-weight:800" '));
- h+=cellPS(gH,gT,gG,gR).replace('<td ','<td class="ttcol" ');h+='</tr>';
- h+='</tbody></table></div><hr style="border:none;border-top:1px solid var(--line);margin:6px 0 18px">';return h;}
-
+// ======================= PLANEJAMENTO =======================
+function plMonths(){const a=DATA.monthsAvail||{};return Object.keys(a).sort();}
+function plLabel(ym){const m=parseInt(ym.split('-')[1],10);return MES_ABREV[m-1]||ym;}
+function plHasBase(ym,hosp){const a=(DATA.monthsAvail||{})[ym];return !!(a&&a.indexOf(hosp)>=0);}
+function plCell(hosp,cod,ym){const h=(DATA.ruleMonths||{})[hosp];const r=h&&h[cod];return (r&&r[ym])||null;}
+const PL_SEMCLS='Sem classifica\u00e7\u00e3o';
 function renderPlano(){
- const cont=document.getElementById('plano-setup');const atts=planoAtts();const H=hospsView();
- let h=renderPlanoSummary();
- // ---- Tabela de rollout: atendimento × hospital (célula = mês) ----
- h+='<div class="section-title" style="font-size:15px;margin:6px 0 8px">Meses de rollout por hospital</div>';
- h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:14px"><table class="sumtable"><thead><tr><th class="rh">Tipo de atendimento</th><th>Grupo</th>';
- H.forEach(hp=>h+=`<th>${esc(hp)}</th>`);h+='</tr></thead><tbody>';
- const opts=monthOptions();
- atts.forEach(a=>{const added=!DATA.geralMatrix[a.id];
-  h+=`<tr><td class="rh">${esc(a.name)}${added?' <span class="oplabel" style="background:#16233f;border-color:#294066;color:#8bb4ff">novo</span>':''}</td><td class="mono-sm">${a.group}</td>`;
-  H.forEach(hp=>{const cur=SHARED.plano.monthsH[a.id+'@@'+hp]||'';
-   h+=`<td><select class="mon-sel" data-mon-att="${esc(a.id)}" data-mon-hosp="${esc(hp)}"><option value="">—</option>${opts.map(m=>`<option ${cur===m?'selected':''}>${m}</option>`).join('')}</select></td>`;});
-  h+='</tr>';});
- h+='</tbody></table></div>';
- h+='<div class="toolrow"><button class="btn-primary" id="btn-gerar">Gerar Plano</button><button class="btn-sec" id="btn-refresh">↻ Atualizar</button></div><div id="plano-output"></div>';
- cont.innerHTML=h;
- cont.querySelectorAll('select[data-mon-att]').forEach(sel=>sel.onchange=()=>{wMonthH(sel.dataset.monAtt,sel.dataset.monHosp,sel.value);renderPlanoSummary&&0;});
- document.getElementById('btn-gerar').onclick=()=>{UI.planoGen=true;saveUI();renderPlanoOutput();};
- document.getElementById('btn-refresh').onclick=()=>renderPlano();
- cont.querySelectorAll('#psum-mode button').forEach(b=>b.onclick=()=>{UI.planoSumMode=b.dataset.m;saveUI();renderPlano();});
- cont.querySelectorAll('.mchip[data-psf]').forEach(el=>el.onclick=()=>{UI.planoSumFilter[el.dataset.psf]=!UI.planoSumFilter[el.dataset.psf];saveUI();renderPlano();});
- if(UI.planoGen)renderPlanoOutput();
-}
-function renderPlanoOutput(){
- const out=document.getElementById('plano-output');const f=UI.planoFilter;const mode=UI.planoMode;const H=hospsView();const n=H.length;
- let h='<div class="toolrow" style="margin-top:16px"><span class="tglabel">Visualização:</span><div class="toggle" id="plano-mode"><button class="'+(mode==='presenca'?'active':'')+'" data-pm="presenca">Presença</button><button class="'+(mode==='efetividade'?'active':'')+'" data-pm="efetividade">Efetividade</button></div></div>';
- h+='<div class="legend-tier">Filtrar tiers: ';
- TIERS.forEach(t=>h+=`<span class="mchip ${f[t]?'on':''}" data-f="${t}">${t}</span>`);
- h+=(mode==='presenca'?' <span class="hint"><span class="chk-ok">✔</span> hospital já cobre · <span class="chk-no">✘</span> a implementar · <b>NA</b> fora do escopo/filtro do mês</span>':' <span class="hint">efetividade do escopo no hospital · <b>Nenhum alerta</b> = aplicável mas sem alertas na base · <b>NA</b> = fora do escopo/filtro do mês</span>')+'</div>';
+ const cont=document.getElementById('plano-setup');if(!cont)return;
+ const months=plMonths();const mode=UI.planMode||'eff';const showAll=!!UI.planAll;
+ let h='<div class="toolrow" style="margin-bottom:12px"><span class="tglabel">C\u00e9lula:</span>'
+  +'<div class="toggle" id="pl-mode"><button class="'+(mode==='eff'?'active':'')+'" data-m="eff">Efetividade</button><button class="'+(mode==='gen'?'active':'')+'" data-m="gen">Qtd Alertas</button></div>'
+  +'<span class="mchip '+(showAll?'on':'')+'" id="pl-all" title="inclui regras que nunca geraram alerta">Mostrar todas as regras</span>'
+  +'<span class="hint">Fundo destacado = do m\u00eas de <b>Planning</b> da regra em diante (defina em Todas as Regras). C\u00e9lula riscada = m\u00eas sem base de alertas confi\u00e1vel para o cliente.</span></div>';
+ if(!months.length){cont.innerHTML=h+'<div class="empty">A base ainda n\u00e3o tem hist\u00f3rico por regra.</div>';return;}
  let any=false;
- monthOptions().forEach(m=>{
-  // para cada hospital, escopos "no radar" do mês = união dos escopos aplicáveis aos atendimentos com rollout==m nesse hospital, cujo tier passa no filtro
-  const hospScopeSet={};let monthKeys={};
-  H.forEach(hp=>{hospScopeSet[hp]={};
-   planoAtts().forEach(a=>{if(SHARED.plano.monthsH[a.id+'@@'+hp]!==m)return;
-    applicableScopes(hp,a.id).forEach(s=>{const tabId=hospTabId(hp)||'geral';const vt=escDisplayTier(curEscVal(tabId,s.key));if(!(vt&&f[vt]))return;
-     hospScopeSet[hp][s.key]=true;monthKeys[s.key]=s;});});});
-  const keys=Object.keys(monthKeys);if(!keys.length)return;
-  // agrupa por categoria
-  const byCat={};keys.forEach(k=>{const info=scopeInfo(k);(byCat[info.cat]=byCat[info.cat]||[]).push({k,info});});
-  const cats=catOrder().filter(c=>byCat[c]).concat(Object.keys(byCat).filter(c=>catOrder().indexOf(c)<0));
-  let body='';
-  cats.forEach(cat=>{let catRows='';
-   byCat[cat].forEach(({k,info})=>{let cells='';let anyActive=false;
-    H.forEach(hp=>{const active=!!hospScopeSet[hp][k];
-     if(active){anyActive=true;const tabId=hospTabId(hp)||'geral';const t=curEscVal(tabId,k);const has=hospHasScope(hp,k);
-      if(mode==='efetividade'){const st=hospScopeStat(hp,k);const e=st.gen>0?st.res/st.gen:null;
-       cells+= e==null? '<td><span class="noalert" title="aplicável neste mês, sem alertas na base">Nenhum alerta</span></td>' : '<td><span style="color:'+effColor(e)+';font-weight:700">'+pct(e)+'</span></td>';}
-      else cells+='<td><span class="tchip '+tierCls(t)+'" title="'+(t||'—')+(has?' · já na base':' · a implementar')+'">'+tierAbbr(t)+'</span> '+(has?'<span class="chk-ok">✔</span>':'<span class="chk-no">✘</span>')+'</td>';}
-     else cells+='<td><span class="tchip t-na" title="fora do escopo/rollout do mês">NA</span></td>';});
-    if(!anyActive)return;
-    catRows+='<tr><th class="rowh">'+esc(info.escopo)+(info.op?'<span class="oplabel">'+esc(info.op)+'</span>':'')+'</th>'+cells+'</tr>';});
-   if(!catRows)return;
-   body+='<tr class="subcatrow"><td colspan="'+(n+1)+'">'+esc(catLabel(cat))+'</td></tr>'+catRows;});
-  if(!body)return;any=true;
-  h+='<div class="plano-month">'+m+'</div><div class="mx-wrap" style="max-height:none;margin-bottom:8px"><table class="mx"><thead><tr><th class="corner rowh">Escopo</th>'+H.map(hp=>'<th>'+esc(hp)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';});
- if(!any)h+='<div class="empty">Nenhum atendimento priorizado. Defina os meses de rollout acima e clique em Gerar Plano.</div>';
- out.innerHTML=h;
- out.querySelectorAll('.mchip[data-f]').forEach(el=>el.onclick=()=>{UI.planoFilter[el.dataset.f]=!UI.planoFilter[el.dataset.f];saveUI();renderPlanoOutput();});
- out.querySelectorAll('#plano-mode button').forEach(el=>el.onclick=()=>{UI.planoMode=el.dataset.pm;saveUI();renderPlanoOutput();});
-}
+ audView().forEach(hosp=>{
+  let rules=DATA.rules.filter(r=>r.hosp===hosp);
+  if(!showAll)rules=rules.filter(r=>{const m=(DATA.ruleMonths||{})[hosp];const d=m&&m[r.cod];
+   if(d&&Object.keys(d).length)return true;const md=ruleMeta(r._rid);return !!(md.cls||md.plan);});
+  if(!rules.length)return;any=true;
+  const grp={};rules.forEach(r=>{const g=ruleMeta(r._rid).cls||PL_SEMCLS;(grp[g]=grp[g]||[]).push(r);});
+  const order=RM_CLS.filter(c=>grp[c]).concat(grp[PL_SEMCLS]?[PL_SEMCLS]:[]);
+  h+='<div class="section-title" style="font-size:15px;margin:16px 0 6px"><i class="dot" style="background:'+hospColor(hosp)+'"></i> '+esc(hosp)+' <span class="mono-sm">('+rules.length+' regra'+(rules.length===1?'':'s')+')</span></div>';
+  h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:10px"><table class="sumtable pl-tbl"><thead><tr><th class="rh">Regra</th>'
+   +months.map(m=>'<th>'+plLabel(m)+'</th>').join('')+'</tr></thead><tbody>';
+  order.forEach(g=>{
+   h+='<tr class="catrow"><td colspan="'+(months.length+1)+'">'+esc(g)+' <span class="mono-sm">('+grp[g].length+')</span></td></tr>';
+   grp[g].forEach(r=>{
+    const plan=ruleMeta(r._rid).plan;const pi=plan?MES_ABREV.indexOf(plan):-1;
+    h+='<tr><td class="rh pl-rule"><span class="code">'+esc(r.cod)+'</span> <span class="pl-desc">'+esc(r.desc)+'</span></td>';
+    months.forEach(ym=>{
+     const mi=parseInt(ym.split('-')[1],10)-1;
+     const on=(pi>=0&&mi>=pi)?' pl-on':'';
+     if(!plHasBase(ym,hosp)){h+='<td class="pl-na'+on+'" title="sem base de alertas confi\u00e1vel para '+esc(hosp)+' neste m\u00eas"></td>';return;}
+     const v=plCell(hosp,r.cod,ym);
+     if(!v){h+='<td class="num'+on+'"><span class="muted">0</span></td>';return;}
+     if(mode==='gen'){h+='<td class="num'+on+'">'+v[0].toLocaleString('pt-BR')+'</td>';}
+     else{const e=v[0]>0?v[1]/v[0]:null;
+      h+='<td class="num'+on+'" style="color:'+effColor(e)+';font-weight:700" title="'+v[1]+' de '+v[0]+' alertas">'+(e==null?'\u2014':pct(e))+'</td>';}
+    });
+    h+='</tr>';});});
+  h+='</tbody></table></div>';});
+ if(!any)h+='<div class="empty">Nenhuma regra com hist\u00f3rico. Ligue \u201cMostrar todas as regras\u201d para ver a lista completa.</div>';
+ cont.innerHTML=h;
+ cont.querySelectorAll('#pl-mode button').forEach(b=>b.onclick=()=>{UI.planMode=b.dataset.m;saveUI();renderPlano();});
+ const pa=document.getElementById('pl-all');if(pa)pa.onclick=()=>{UI.planAll=!UI.planAll;saveUI();renderPlano();};}
+
 function showLogin(msg){const g=document.getElementById('auth-gate');if(g)g.style.display='flex';const u=document.getElementById('userbar');if(u)u.style.display='none';const m=document.getElementById('auth-msg');if(m)m.textContent=msg||'';}
 function showApp(user){const g=document.getElementById('auth-gate');if(g)g.style.display='none';const u=document.getElementById('userbar');if(u)u.style.display='flex';const e=document.getElementById('user-email');if(e)e.textContent=(user&&user.email)||'';}
 function initAuth(){
@@ -1187,10 +1143,11 @@ function initApp(){
  (function(){const e=document.getElementById('hint-periodo'),p=DATA.meta.periodo;
    if(e&&p)e.textContent='('+mesLabel(p.de)+' \u2192 '+mesLabel(p.ate)+')';})();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;fhosp.appendChild(o);});
- Object.keys(DATA.operators).forEach(op=>{let rs=[];Object.values(DATA.operators[op]).forEach(c=>Object.values(c).forEach(v=>rs=rs.concat(v)));const o=el('option');o.value=op;o.textContent=op+' ('+rs.length+')';opsel.appendChild(o);});
+ (function(){const cnt={};DATA.rules.forEach(r=>{if(r.op)cnt[r.op]=(cnt[r.op]||0)+1;});
+  Object.keys(cnt).sort().forEach(op=>{const o=el('option');o.value=op;o.textContent=op+' ('+cnt[op]+')';if(fopsel)fopsel.appendChild(o);});})();
  populateCatFilter();
  DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;tfh.appendChild(o);});
- refreshCentral();refreshOps();refreshCov();buildVol();buildTodas();renderEscopos();renderPlano();
+ refreshCentral();refreshCov();buildVol();buildTodas();renderEscopos();renderPlano();
 }
 initAuth();
 
@@ -1455,7 +1412,7 @@ function renderAcomp(){
 
 // ---- tabs ----
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
- ['central','operadoras','cobertura','volume','todas','escopos','plano','acomp'].forEach(t=>document.getElementById('tab-'+t).style.display=t===b.dataset.tab?'block':'none');if(b.dataset.tab==='plano')renderPlano();if(b.dataset.tab==='escopos')renderEscopos();if(b.dataset.tab==='acomp')renderAcomp();});
+ ['central','cobertura','volume','todas','escopos','plano','acomp'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.style.display=(t===b.dataset.tab)?'block':'none';});if(b.dataset.tab==='plano')renderPlano();if(b.dataset.tab==='escopos')renderEscopos();if(b.dataset.tab==='acomp')renderAcomp();});
 </script>
 <div class="modal" id="modal" style="display:none"><div class="modal-box" id="modal-box"></div></div>
 </body></html>
