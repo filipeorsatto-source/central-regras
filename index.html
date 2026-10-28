@@ -220,6 +220,19 @@ header{position:relative}
 .sumtable .ttcol{border-right:2px solid var(--line);font-weight:800}
 .sumtable th.ttcol{color:var(--fg);letter-spacing:.5px}
 .mchip{display:inline-block;padding:3px 10px;border-radius:16px;border:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);background:var(--panel2)}
+.msf{position:relative;display:inline-block}
+.msf>button{position:relative;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:10px 30px 10px 12px;font-size:14px;cursor:pointer;text-align:left;min-width:170px;font-family:inherit}
+.msf>button:after{content:'\25be';position:absolute;right:11px;top:10px;color:var(--muted)}
+.msf.on>button{border-color:var(--accent);color:var(--accent)}
+.msf-pan{display:none;position:absolute;z-index:70;top:calc(100% + 4px);left:0;min-width:250px;max-height:320px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+.msf.open .msf-pan{display:block}
+.msf-pan label{display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap}
+.msf-pan label:hover{background:var(--chip)}
+.msf-pan label i{font-style:normal;color:var(--muted);font-size:11px}
+.msf-act{display:flex;gap:12px;padding:2px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.msf-act a{color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline}
+.mschk{display:inline-flex;gap:7px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.toolrow input[type=text],.toolbar input.narrow{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:9px;font-size:13px;min-width:200px}
 .mchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .plano-month{font-size:15px;font-weight:800;margin:20px 0 8px;color:var(--accent2)}
 .mono-sm{font-size:11px;color:var(--muted)}
@@ -283,6 +296,7 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
     <input type="text" id="search" placeholder="Buscar por descrição, código ou escopo...">
     <select id="fhosp"><option value="">Todos os hospitais</option></select>
     <select id="fop"><option value="">Todas as operadoras</option></select>
+    <span class="msf" id="fcls"></span>
     <button class="btn-sec" id="btn-add-gscope">+ Novo escopo</button>
     <button class="btn-sec" id="btn-cats">Categorias</button>
     <span class="hint" id="central-hint"></span>
@@ -320,9 +334,10 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
    <div class="section-title">Todas as regras · efetividade</div>
    <div class="toolbar">
     <input type="text" id="tsearch" placeholder="Buscar código, descrição, categoria...">
-    <select id="tfhosp"><option value="">Todos os hospitais</option></select>
-    <select id="tfcat"><option value="">Todas as categorias</option></select>
-    <select id="tfalert"><option value="">Com e sem alertas</option><option value="1">Só com alertas gerados</option></select>
+    <span class="msf" id="tfhosp"></span>
+    <span class="msf" id="tfcat"></span>
+    <span class="msf" id="tfcls"></span>
+    <label class="mschk"><input type="checkbox" id="tfalert"> Só com alertas gerados</label>
     <span class="hint" id="todas-hint"></span>
    </div>
    <div class="big-wrap"><table class="big-table" id="bigtable"></table></div>
@@ -338,12 +353,25 @@ ul.rd-list li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;ba
   <section id="tab-plano" style="display:none">
    <div class="section-title">Planejamento — regras por mês</div>
    <p class="muted" style="margin-bottom:12px">Uma tabela por cliente, com as regras agrupadas pela <b>Classificação</b> definida em Todas as Regras. A partir do mês de <b>Planning</b> da regra, as células ficam destacadas.</p>
+   <div class="toolrow" id="pl-tools">
+    <span class="tglabel">Célula:</span>
+    <div class="toggle" id="pl-mode"><button class="active" data-m="eff">Efetividade</button><button data-m="gen">Qtd Alertas</button></div>
+    <span class="mchip" id="pl-all" title="inclui regras que nunca geraram alerta">Mostrar todas as regras</span>
+    <input type="text" id="pl-q" placeholder="Buscar código da regra...">
+    <span class="msf" id="pl-cls"></span>
+   </div>
+   <p class="hint" style="margin-bottom:12px">Fundo destacado = do mês de <b>Planning</b> da regra em diante (defina em Todas as Regras). Célula riscada = mês sem base de alertas confiável para o cliente.</p>
    <div id="plano-setup"></div>
   </section>
 
   <section id="tab-acomp" style="display:none">
    <div class="section-title">Acompanhamento — evolução de regras e efetividade</div>
-   <p class="muted" style="margin-bottom:14px">Série de Maio/26 em diante. Efetividade sempre consolidada (alertas resolvidos ÷ gerados) e apurada <b>somente sobre alertas de contas finalizadas</b> — conta não finalizada ainda não diz se a lógica da regra faz sentido. É a mesma base do cabeçalho do app.</p>
+   <p class="muted" style="margin-bottom:14px">Série de Julho/26 em diante — primeiro mês com base completa para os 7 clientes. Efetividade sempre consolidada (alertas resolvidos ÷ gerados) e apurada <b>somente sobre alertas de contas finalizadas</b> — conta não finalizada ainda não diz se a lógica da regra faz sentido. É a mesma base do cabeçalho do app.</p>
+   <div class="toolrow" id="ac-tools">
+    <span class="tglabel">Classificação:</span>
+    <span class="msf" id="ac-cls"></span>
+    <span class="hint">As séries são recalculadas a partir do histórico mensal por regra, respeitando o filtro.</span>
+   </div>
    <div id="acomp-view"></div>
   </section>
  </main>
@@ -365,7 +393,7 @@ function hospColor(h){if(HOSP_COLORS[h])return HOSP_COLORS[h];const i=((DATA&&DA
 let GV=0,GG=0;
 function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
 function esc(s){return (s==null?'':''+s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
-function pct(x,d){return (x*100).toFixed(d==null?0:d)+'%';}
+function pct(x,d){return (x*100).toFixed(d==null?0:d).replace('.',',')+'%';}
 function money(v){return 'R$ '+Math.round(v).toLocaleString('pt-BR');}
 function effVal(gen,res){return gen>0?res/gen:null;}
 function effColor(e){return e==null?'var(--muted)':e>=0.35?'var(--green)':e>=0.15?'var(--amber)':'var(--red)';}
@@ -432,12 +460,14 @@ function buildTree(container,tree,q,hf){
  const ch=document.getElementById('central-hint');if(ch&&container.id==='tree')ch.textContent=`${shownRules} regras · ${shownCat} categorias`;}
 const fhosp=document.getElementById('fhosp');
 // ---- Central de Regras: scaffold editável (mostra escopos/categorias mesmo sem regras) ----
-function centralScaffold(q,hf){const byCat={};
+function centralClsSel(){return msfSel(document.getElementById('fcls'));}
+function centralScaffold(q,hf){const byCat={};const selL=centralClsSel();
  allScopes().forEach(s=>{const cat=s.cat;(byCat[cat]=byCat[cat]||{});byCat[cat][s.key]=byCat[cat][s.key]||{info:{key:s.key,cat:cat,escopo:scopeLabel(s.key,s.escopo)},rules:[]};});
  const opf=(document.getElementById('fop')||{}).value||'';
  DATA.rules.forEach(r=>{const e=effCatEsc(r);
   if(hf&&r.hosp!==hf)return;
   if(opf&&(r.op||'')!==opf)return;
+  if(!clsMatch(selL,r))return;
   if(q){const t=(r.desc+' '+r.cod+' '+e.escopo+' '+catLabel(e.cat)).toLowerCase();if(t.indexOf(q)<0)return;}
   const sc=(byCat[e.cat]=byCat[e.cat]||{});const cell=sc[e.key]=sc[e.key]||{info:{key:e.key,cat:e.cat,escopo:e.escopo},rules:[]};cell.rules.push(r);});
  return byCat;}
@@ -446,7 +476,9 @@ function inlineRename(span,current,onCommit){if(!span)return;const inp=document.
  const commit=()=>{if(done)return;done=true;const v=inp.value.trim();if(v&&v!==current)onCommit(v);else refreshCentral();};
  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){done=true;refreshCentral();}};
  inp.onblur=()=>setTimeout(commit,100);}
-function buildCentralTree(){const container=document.getElementById('tree');const q=document.getElementById('search').value.trim().toLowerCase();const hf=fhosp.value;const opf=(document.getElementById('fop')||{}).value||'';const filtering=!!(q||hf||opf);
+function buildCentralTree(){const container=document.getElementById('tree');const q=document.getElementById('search').value.trim().toLowerCase();const hf=fhosp.value;const opf=(document.getElementById('fop')||{}).value||'';
+ const fclsEl=document.getElementById('fcls');msfInit(fclsEl,'Todas as classificações',refreshCentral);msfSet(fclsEl,clsOptions(DATA.rules));
+ const filtering=!!(q||hf||opf||msfSel(fclsEl));
  const byCat=centralScaffold(q,hf);
  const cats=catOrder().slice();Object.keys(byCat).forEach(c=>{if(cats.indexOf(c)<0)cats.push(c);});
  container.innerHTML='';let shownCat=0,shownRules=0;
@@ -598,12 +630,20 @@ function showVolRules(cat,h){const rows=DATA.rules.filter(r=>(r._ecat||r.cat)===
 document.querySelectorAll('#volmode button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#volmode button').forEach(x=>x.classList.remove('active'));b.classList.add('active');VOLM=b.dataset.m;document.getElementById('volrules').classList.remove('show');buildVol();});
 
 // ---- todas as regras ----
-const tf={hosp:'',cat:'',alert:'',q:''};let tsort={key:'eff',dir:-1};
+const tf={alert:false,q:''};let tsort={key:'eff',dir:-1};
 const tfcat=document.getElementById('tfcat');
 const tfh=document.getElementById('tfhosp');
-const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['valor','Peso'],['cls','Classificação'],['llm','LLM'],['blk','Bloqueante'],['plan','Planning'],['edit','']];
-function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;if(k==='valor')return r.valor;if(k==='cat')return r._ecat||r.cat;if(k==='escopo')return r._eesc||r.escopo;
- if(k==='cls'||k==='llm'||k==='blk')return ruleMeta(r._rid)[k]||'';
+const tfcls=document.getElementById('tfcls');
+const TCOLS=[['cod','Código'],['desc','Descrição'],['hosp','Hospital'],['cat','Categoria'],['escopo','Escopo'],['op','Operadora'],['gen','Alertas'],['res','Resolvidos'],['eff','Efetividade'],['apc','Alertas / Conta'],['valor','Valor alertado'],['valorRes','Valor resolvido'],['pva','Peso rel. alertado'],['pvr','Peso rel. resolvido'],['peso','Peso na base'],['cls','Classificação'],['llm','LLM'],['blk','Bloqueante'],['plan','Planning'],['edit','']];
+function apConta(r){return (r.contas>0)?r.gen/r.contas:null;}
+function num1(v){return v==null?'—':v.toFixed(1).replace('.',',');}
+function rVal(r,k){if(k==='eff')return effVal(r.gen,r.res)??-1;
+ if(k==='valor'||k==='peso'||k==='pva')return r.valor||0;
+ if(k==='valorRes'||k==='pvr')return r.valorRes||0;
+ if(k==='apc')return apConta(r)??-1;
+ if(k==='cat')return r._ecat||r.cat;if(k==='escopo')return r._eesc||r.escopo;
+ if(k==='cls')return ruleCls(r);
+ if(k==='llm'||k==='blk')return ruleMeta(r._rid)[k]||'';
  if(k==='plan'){const v=ruleMeta(r._rid).plan;return v?MES_ABREV.indexOf(v):-1;}
  return r[k];}
 // célula leve: mostra o valor e só vira <select> ao clicar (evita milhares de selects no DOM)
@@ -613,7 +653,8 @@ function rmSel(rid,field,opts,cur,cls){
  return '<span class="rm-cell'+(cls?' '+cls:'')+(cur?' set':'')+'" data-rid="'+esc(rid)+'" data-f="'+field+'">'+(cur?esc(cur):'—')+'</span>';}
 function rmOpenEditor(span){
  if(span.querySelector('select'))return;
- const rid=span.dataset.rid,field=span.dataset.f,cur=ruleMeta(rid)[field]||'';
+ const rid=span.dataset.rid,field=span.dataset.f;
+ const cur=(field==='cls')?ruleCls(RULEBYID[rid]):(ruleMeta(rid)[field]||'');
  const sel=document.createElement('select');sel.className='rm-sel'+(span.classList.contains('wide')?' wide':'');
  sel.innerHTML='<option value="">—</option>'+rmOpts(field).map(o=>'<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>').join('');
  const prev=span.innerHTML;span.innerHTML='';span.appendChild(sel);sel.focus();
@@ -624,12 +665,21 @@ function rmOpenEditor(span){
  sel.onchange=()=>close(sel.value);
  sel.onblur=()=>close(undefined);
  sel.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close(undefined);}};}
-function populateCatFilter(){if(typeof tfcat==='undefined'||!tfcat)return;const cur=tf.cat;tfcat.innerHTML='<option value="">Todas as categorias</option>';
- catOrder().forEach(c=>{const o=el('option');o.value=c;o.textContent=catLabel(c);if(c===cur)o.selected=true;tfcat.appendChild(o);});}
+function populateCatFilter(){
+ msfInit(tfh,'Todos os hospitais',buildTodas);
+ msfInit(tfcat,'Todas as categorias',buildTodas);
+ msfInit(tfcls,'Todas as classificações',buildTodas);
+ msfSet(tfh,hospsView().map(h=>[h,h]));
+ msfSet(tfcat,catOrder().map(c=>[c,catLabel(c)]));
+ msfSet(tfcls,clsOptions(DATA.rules));}
 function buildTodas(){populateCatFilter();
- let rows=DATA.rules.filter(r=>{if(tf.hosp&&r.hosp!==tf.hosp)return false;if(tf.cat&&(r._ecat||r.cat)!==tf.cat)return false;
-  if(tf.alert==='1'&&r.gen<=0)return false;
+ const selH=msfSel(tfh),selC=msfSel(tfcat),selL=msfSel(tfcls);
+ let rows=DATA.rules.filter(r=>{if(selH&&!selH.has(r.hosp))return false;if(selC&&!selC.has(r._ecat||r.cat))return false;
+  if(!clsMatch(selL,r))return false;
+  if(tf.alert&&r.gen<=0)return false;
   if(tf.q){const t=(r.cod+' '+r.desc+' '+(r._ecat||r.cat)+' '+(r._eesc||r.escopo)+' '+r.op).toLowerCase();if(!t.includes(tf.q))return false;}return true;});
+ // pesos relativos: somatório das linhas filtradas na tela
+ let sumVA=0,sumVR=0;rows.forEach(r=>{sumVA+=r.valor||0;sumVR+=r.valorRes||0;});
  rows.sort((a,b)=>{const x=rVal(a,tsort.key),y=rVal(b,tsort.key);if(x<y)return -tsort.dir;if(x>y)return tsort.dir;return 0;});
  const t=document.getElementById('bigtable');
  let head='<thead><tr>'+TCOLS.map(([k,l])=>`<th data-k="${k}">${l}${tsort.key===k?` <span class="sarr">${tsort.dir>0?'▲':'▼'}</span>`:''}</th>`).join('')+'</tr></thead>';
@@ -639,8 +689,13 @@ function buildTodas(){populateCatFilter();
    <td>${esc(r._ecat||r.cat)}</td><td class="muted">${esc(r._eesc||r.escopo)}</td><td>${r.op?esc(r.op):'<span class="muted">—</span>'}</td>
    <td class="num">${r.gen.toLocaleString('pt-BR')}</td><td class="num">${r.res.toLocaleString('pt-BR')}</td>
    <td class="num" style="color:${effColor(e)};font-weight:700">${e==null?'—':pct(e)}</td>
-   <td class="num">${pct(r.valor/GV,2)}</td>
-   <td class="rmcol">${rmSel(r._rid,'cls',RM_CLS,ruleMeta(r._rid).cls,'wide')}</td>
+   <td class="num">${num1(apConta(r))}</td>
+   <td class="num">${money(r.valor||0)}</td>
+   <td class="num">${money(r.valorRes||0)}</td>
+   <td class="num">${sumVA?pct((r.valor||0)/sumVA,2):'—'}</td>
+   <td class="num">${sumVR?pct((r.valorRes||0)/sumVR,2):'—'}</td>
+   <td class="num">${GV?pct((r.valor||0)/GV,2):'—'}</td>
+   <td class="rmcol">${rmSel(r._rid,'cls',RM_CLS,ruleCls(r),'wide')}</td>
    <td class="rmcol">${rmSel(r._rid,'llm',RM_SN,ruleMeta(r._rid).llm)}</td>
    <td class="rmcol">${rmSel(r._rid,'blk',RM_SN,ruleMeta(r._rid).blk)}</td>
    <td class="rmcol">${rmSel(r._rid,'plan',MES_ABREV,ruleMeta(r._rid).plan)}</td>
@@ -651,8 +706,7 @@ function buildTodas(){populateCatFilter();
  t.querySelectorAll('span.rm-cell').forEach(sp=>sp.onclick=e=>{e.stopPropagation();rmOpenEditor(sp);});
  document.getElementById('todas-hint').textContent=`${rows.length} regras${rows.length>1500?' (exibindo 1500)':''}`;}
 document.getElementById('tsearch').oninput=e=>{tf.q=e.target.value.trim().toLowerCase();buildTodas();};
-tfh.onchange=e=>{tf.hosp=e.target.value;buildTodas();};tfcat.onchange=e=>{tf.cat=e.target.value;buildTodas();};
-document.getElementById('tfalert').onchange=e=>{tf.alert=e.target.value;buildTodas();};
+document.getElementById('tfalert').onchange=e=>{tf.alert=!!e.target.checked;buildTodas();};
 
 
 // ======================= ESTADO EDITÁVEL (Firebase RTDB, tempo real) =======================
@@ -749,9 +803,50 @@ function wAttShare(attId,val){SHARED.attShare[attId]=val;
  if(HAVE_FB)DB.ref('geral/attShare/'+attId).set(val).catch(fbErr);else persistSharedLocal();}
 // reatribuição de regra → escopo, GLOBAL (afeta todas as visões). rid = hosp||cod
 // ---- metadados editáveis da regra (Classificação, LLM, Bloqueante, Planning) ----
-const RM_CLS=['Sugestão Inclusão','Sugestão Exclusão','Automático Inclusão','Automático Exclusão','Atualização Item','Alerta Negativo','Alerta Positivo','Alerta Recomendação'];
+const RM_CLS=['Sugestão Inclusão','Sugestão Exclusão','Sugestão Exclusão + Sugestão Inclusão','Sugestão Exclusão + Atualização Item','Automático Inclusão','Automático Exclusão','Automático Exclusão + Automático Inclusão','Atualização Item','Alerta Negativo','Alerta Positivo','Alerta Recomendação','Alerta (tipo A)','Regra quebrada'];
+const PL_SEMCLS='Sem classifica\u00e7\u00e3o';
 const RM_SN=['Sim','Não'];
 function ruleMeta(rid){return (SHARED.ruleMeta&&SHARED.ruleMeta[rid])||{};}
+// classificação efetiva: edição manual (ruleMeta) sobrepõe a classificação que veio da base
+function ruleCls(r){if(!r)return '';const m=ruleMeta(r._rid).cls;return (m!=null&&m!=='')?m:(r.cls||'');}
+function clsOptions(rules){const c={};rules.forEach(r=>{const v=ruleCls(r)||PL_SEMCLS;c[v]=(c[v]||0)+1;});
+ const out=RM_CLS.filter(x=>c[x]).map(x=>[x,x,c[x]]);
+ Object.keys(c).forEach(k=>{if(k!==PL_SEMCLS&&RM_CLS.indexOf(k)<0)out.push([k,k,c[k]]);});
+ if(c[PL_SEMCLS])out.push([PL_SEMCLS,PL_SEMCLS,c[PL_SEMCLS]]);
+ return out;}
+function clsMatch(sel,r){if(!sel)return true;return sel.has(ruleCls(r)||PL_SEMCLS);}
+// ---- filtro multi-seleção (checkbox) reaproveitável ----
+function msfInit(host,label,onChange){if(!host||host._msf)return host&&host._msf;
+ host.classList.add('msf');host.innerHTML='<button type="button"></button><div class="msf-pan"></div>';
+ const st={label:label,sel:new Set(),opts:[],sig:null,onChange:onChange};host._msf=st;
+ host.querySelector('button').onclick=e=>{e.stopPropagation();
+  document.querySelectorAll('.msf.open').forEach(x=>{if(x!==host)x.classList.remove('open');});
+  host.classList.toggle('open');};
+ host.querySelector('.msf-pan').onclick=e=>e.stopPropagation();
+ return st;}
+function msfLabel(host){const st=host._msf,b=host.querySelector('button'),n=st.sel.size;
+ if(n===0||n===st.opts.length)b.textContent=st.label;
+ else if(n===1){const o=st.opts.find(x=>st.sel.has(x[0]));b.textContent=o?o[1]:st.label;}
+ else b.textContent=n+' selecionados';
+ host.classList.toggle('on',n>0&&n<st.opts.length);}
+function msfSet(host,opts){const st=host&&host._msf;if(!st)return;
+ const sig=opts.map(o=>o[0]+'\u0001'+o[1]+'\u0001'+(o[2]==null?'':o[2])).join('\u0002');
+ if(st.sig===sig){msfLabel(host);return;}
+ st.sig=sig;st.opts=opts;const valid={};opts.forEach(o=>valid[o[0]]=1);
+ Array.from(st.sel).forEach(v=>{if(!valid[v])st.sel.delete(v);});
+ const pan=host.querySelector('.msf-pan');
+ pan.innerHTML='<div class="msf-act"><a data-a="all">Todos</a><a data-a="none">Nenhum</a></div>'
+  +opts.map(o=>'<label><input type="checkbox" value="'+esc(String(o[0])).replace(/"/g,'&quot;')+'"'+(st.sel.has(o[0])?' checked':'')
+   +'><span>'+esc(String(o[1]))+(o[2]!=null?' <i>'+o[2]+'</i>':'')+'</span></label>').join('');
+ pan.querySelectorAll('input[type=checkbox]').forEach(i=>i.onchange=()=>{if(i.checked)st.sel.add(i.value);else st.sel.delete(i.value);msfLabel(host);st.onChange();});
+ pan.querySelectorAll('a[data-a]').forEach(a=>a.onclick=()=>{st.sel.clear();
+  if(a.dataset.a==='all')st.opts.forEach(o=>st.sel.add(o[0]));
+  pan.querySelectorAll('input[type=checkbox]').forEach(i=>{i.checked=st.sel.has(i.value);});
+  msfLabel(host);st.onChange();});
+ msfLabel(host);}
+function msfSel(host){const st=host&&host._msf;if(!st)return null;
+ return (st.sel.size===0||st.sel.size===st.opts.length)?null:st.sel;}
+document.addEventListener('click',()=>{document.querySelectorAll('.msf.open').forEach(x=>x.classList.remove('open'));});
 function wRuleMeta(rid,field,val){SHARED.ruleMeta=SHARED.ruleMeta||{};
  const cur=Object.assign({},SHARED.ruleMeta[rid]||{});
  if(val)cur[field]=val;else delete cur[field];
@@ -1068,23 +1163,32 @@ function plMonths(){const a=DATA.monthsAvail||{};return Object.keys(a).sort();}
 function plLabel(ym){const m=parseInt(ym.split('-')[1],10);return MES_ABREV[m-1]||ym;}
 function plHasBase(ym,hosp){const a=(DATA.monthsAvail||{})[ym];return !!(a&&a.indexOf(hosp)>=0);}
 function plCell(hosp,cod,ym){const h=(DATA.ruleMonths||{})[hosp];const r=h&&h[cod];return (r&&r[ym])||null;}
-const PL_SEMCLS='Sem classifica\u00e7\u00e3o';
+let PL_Q='';
+function plWire(){
+ const md=document.getElementById('pl-mode');if(md&&!md._w){md._w=1;
+  md.querySelectorAll('button').forEach(b=>b.onclick=()=>{UI.planMode=b.dataset.m;saveUI();renderPlano();});}
+ const pa=document.getElementById('pl-all');if(pa&&!pa._w){pa._w=1;pa.onclick=()=>{UI.planAll=!UI.planAll;saveUI();renderPlano();};}
+ const q=document.getElementById('pl-q');if(q&&!q._w){q._w=1;q.oninput=()=>{PL_Q=q.value.trim().toLowerCase();renderPlano();};}
+ const fc=document.getElementById('pl-cls');msfInit(fc,'Todas as classificações',renderPlano);msfSet(fc,clsOptions(DATA.rules));}
 function renderPlano(){
  const cont=document.getElementById('plano-setup');if(!cont)return;
+ plWire();
  const months=plMonths();const mode=UI.planMode||'eff';const showAll=!!UI.planAll;
- let h='<div class="toolrow" style="margin-bottom:12px"><span class="tglabel">C\u00e9lula:</span>'
-  +'<div class="toggle" id="pl-mode"><button class="'+(mode==='eff'?'active':'')+'" data-m="eff">Efetividade</button><button class="'+(mode==='gen'?'active':'')+'" data-m="gen">Qtd Alertas</button></div>'
-  +'<span class="mchip '+(showAll?'on':'')+'" id="pl-all" title="inclui regras que nunca geraram alerta">Mostrar todas as regras</span>'
-  +'<span class="hint">Fundo destacado = do m\u00eas de <b>Planning</b> da regra em diante (defina em Todas as Regras). C\u00e9lula riscada = m\u00eas sem base de alertas confi\u00e1vel para o cliente.</span></div>';
- if(!months.length){cont.innerHTML=h+'<div class="empty">A base ainda n\u00e3o tem hist\u00f3rico por regra.</div>';return;}
+ const selL=msfSel(document.getElementById('pl-cls'));
+ document.querySelectorAll('#pl-mode button').forEach(b=>b.classList.toggle('active',b.dataset.m===mode));
+ const pa0=document.getElementById('pl-all');if(pa0)pa0.classList.toggle('on',showAll);
+ let h='';
+ if(!months.length){cont.innerHTML='<div class="empty">A base ainda n\u00e3o tem hist\u00f3rico por regra.</div>';return;}
  let any=false;
  audView().forEach(hosp=>{
   let rules=DATA.rules.filter(r=>r.hosp===hosp);
   if(!showAll)rules=rules.filter(r=>{const m=(DATA.ruleMonths||{})[hosp];const d=m&&m[r.cod];
-   if(d&&Object.keys(d).length)return true;const md=ruleMeta(r._rid);return !!(md.cls||md.plan);});
+   if(d&&Object.keys(d).length)return true;const md=ruleMeta(r._rid);return !!(ruleCls(r)||md.plan);});
+  rules=rules.filter(r=>clsMatch(selL,r));
+  if(PL_Q)rules=rules.filter(r=>(r.cod+' '+r.desc).toLowerCase().includes(PL_Q));
   if(!rules.length)return;any=true;
-  const grp={};rules.forEach(r=>{const g=ruleMeta(r._rid).cls||PL_SEMCLS;(grp[g]=grp[g]||[]).push(r);});
-  const order=RM_CLS.filter(c=>grp[c]).concat(grp[PL_SEMCLS]?[PL_SEMCLS]:[]);
+  const grp={};rules.forEach(r=>{const g=ruleCls(r)||PL_SEMCLS;(grp[g]=grp[g]||[]).push(r);});
+  const order=RM_CLS.filter(c=>grp[c]).concat(Object.keys(grp).filter(c=>c!==PL_SEMCLS&&RM_CLS.indexOf(c)<0)).concat(grp[PL_SEMCLS]?[PL_SEMCLS]:[]);
   h+='<div class="section-title" style="font-size:15px;margin:16px 0 6px"><i class="dot" style="background:'+hospColor(hosp)+'"></i> '+esc(hosp)+' <span class="mono-sm">('+rules.length+' regra'+(rules.length===1?'':'s')+')</span></div>';
   h+='<div class="mx-wrap" style="max-height:60vh;margin-bottom:10px"><table class="sumtable pl-tbl"><thead><tr><th class="rh">Regra</th>'
    +months.map(m=>'<th>'+plLabel(m)+'</th>').join('')+'</tr></thead><tbody>';
@@ -1105,10 +1209,8 @@ function renderPlano(){
     });
     h+='</tr>';});});
   h+='</tbody></table></div>';});
- if(!any)h+='<div class="empty">Nenhuma regra com hist\u00f3rico. Ligue \u201cMostrar todas as regras\u201d para ver a lista completa.</div>';
- cont.innerHTML=h;
- cont.querySelectorAll('#pl-mode button').forEach(b=>b.onclick=()=>{UI.planMode=b.dataset.m;saveUI();renderPlano();});
- const pa=document.getElementById('pl-all');if(pa)pa.onclick=()=>{UI.planAll=!UI.planAll;saveUI();renderPlano();};}
+ if(!any)h+='<div class="empty">Nenhuma regra encontrada com os filtros atuais.</div>';
+ cont.innerHTML=h;}
 
 function showLogin(msg){const g=document.getElementById('auth-gate');if(g)g.style.display='flex';const u=document.getElementById('userbar');if(u)u.style.display='none';const m=document.getElementById('auth-msg');if(m)m.textContent=msg||'';}
 function showApp(user){const g=document.getElementById('auth-gate');if(g)g.style.display='none';const u=document.getElementById('userbar');if(u)u.style.display='flex';const e=document.getElementById('user-email');if(e)e.textContent=(user&&user.email)||'';}
@@ -1146,7 +1248,6 @@ function initApp(){
  (function(){const cnt={};DATA.rules.forEach(r=>{if(r.op)cnt[r.op]=(cnt[r.op]||0)+1;});
   Object.keys(cnt).sort().forEach(op=>{const o=el('option');o.value=op;o.textContent=op+' ('+cnt[op]+')';if(fopsel)fopsel.appendChild(o);});})();
  populateCatFilter();
- DATA.hosps.forEach(h=>{const o=el('option');o.value=h;o.textContent=h;tfh.appendChild(o);});
  refreshCentral();refreshCov();buildVol();buildTodas();renderEscopos();renderPlano();
 }
 initAuth();
@@ -1167,6 +1268,29 @@ function acCard(n,title,sub,body){
 // eixo y: ticks "redondos"
 function acTicks(max,n){const step=Math.ceil(max/n/10)*10||1;const out=[];for(let v=0;v<=step*n;v+=step)out.push(v);return out;}
 
+// ---------- séries derivadas do histórico por regra (respeita o filtro de classificação) ----------
+function acClsSel(){const e=document.getElementById('ac-cls');return e?msfSel(e):null;}
+function acSeries(A){
+ const ms=A.meses||[];if(!ms.length)return A;
+ const sel=acClsSel(),hosps=audView(),ymOf=m=>String((m&&(m.m||m.mes))||'').replace('/','-');
+ if(!ms[0]||!ms[0].m)return A;
+ const hp={};hosps.forEach(h=>hp[h]=ms.map(()=>[0,0,0]));
+ const tot=ms.map(()=>[0,0,0]);
+ const RM=DATA.ruleMonths||{};
+ DATA.rules.forEach(r=>{if(!hp[r.hosp])return;if(!clsMatch(sel,r))return;
+  const d=RM[r.hosp]&&RM[r.hosp][r.cod];if(!d)return;
+  ms.forEach((m,i)=>{const v=d[ymOf(m)];if(!v||!v[0])return;
+   hp[r.hosp][i][0]+=v[0];hp[r.hosp][i][1]+=v[1];hp[r.hosp][i][2]++;
+   tot[i][0]+=v[0];tot[i][1]+=v[1];tot[i][2]++;});});
+ const meses=ms.map((m,i)=>({m:m.m,l:m.l,a:tot[i][0],r:tot[i][1],v:m.v,n:tot[i][2],p:m.p}));
+ const minVol=A.minVol||200,ri=ms.length-1,pi=ms.length-2,top=[];
+ if(pi>=0){DATA.rules.forEach(r=>{if(!hp[r.hosp])return;if(!clsMatch(sel,r))return;
+   const d=RM[r.hosp]&&RM[r.hosp][r.cod];if(!d)return;
+   const v1=d[ymOf(ms[ri])],v0=d[ymOf(ms[pi])];
+   if(!v1||!v0||v1[0]<minVol||v0[0]<minVol)return;
+   top.push({h:r.hosp,c:r.cod,g0:v0[0],r0:v0[1],g1:v1[0],r1:v1[1],_d:v1[1]/v1[0]-v0[1]/v0[0]});});
+  top.sort((a,b)=>b._d-a._d);}
+ return Object.assign({},A,{meses:meses,hosp:hp,top:top.slice(0,10)});}
 // ---------- KPIs ----------
 function acKpis(A){
  const ms=A.meses, i=ms.findIndex(m=>m.m===A.ref), cur=ms[i], prv=ms[i-1];
@@ -1336,7 +1460,7 @@ function acChartPen(A){
 
 // ---------- 6. efetividade por categoria no mes de referencia ----------
 function acChartCat(A){
- const agg={};DATA.rules.forEach(r=>{if(!r.gen)return;const c=(r._ecat||r.cat);
+ const sel=acClsSel();const agg={};DATA.rules.forEach(r=>{if(!r.gen)return;if(!clsMatch(sel,r))return;const c=(r._ecat||r.cat);
   const o=agg[c]=agg[c]||[0,0];o[0]+=r.gen;o[1]+=r.res;});
  const rows=Object.keys(agg).map(c=>({c:c,g:agg[c][0],r:agg[c][1],v:agg[c][1]/agg[c][0]}))
   .filter(x=>x.g>0).sort((a,b)=>b.v-a.v);
@@ -1396,12 +1520,15 @@ function acWire(root){
 // ---------- render ----------
 function renderAcomp(){
  const cont=document.getElementById('acomp-view');if(!cont)return;
- const A=DATA.acomp;
- if(!A){cont.innerHTML='<div class="empty">Base de acompanhamento ainda não carregada.</div>';return;}
+ const fc=document.getElementById('ac-cls');msfInit(fc,'Todas as classificações',renderAcomp);msfSet(fc,clsOptions(DATA.rules));
+ const A0=DATA.acomp;
+ if(!A0){cont.innerHTML='<div class="empty">Base de acompanhamento ainda não carregada.</div>';return;}
+ const A=acSeries(A0);
+ if(!A.meses.length||!A.meses.some(m=>m.a>0)){cont.innerHTML='<div class="empty">Nenhum alerta no período para as classificações selecionadas.</div>';return;}
  const p=A.meses.some(m=>m.p)?'<span class="ac-note">* mês parcial — fora das comparações</span>':'';
  let h=acKpis(A);
  h+=acCard(1,'Regras ativas por mês','Regra com ao menos 1 alerta gerado no mês, empilhada por hospital. '+p,acChartAtivas(A));
- h+=acCard(2,'Efetividade consolidada por mês','Alertas resolvidos ÷ gerados, somente em contas finalizadas, de Maio em diante. A linha pontilhada é a meta da Gestão de Metas (Set → Dez).',acChartEfet(A));
+ h+=acCard(2,'Efetividade consolidada por mês','Alertas resolvidos ÷ gerados, somente em contas finalizadas, de Julho em diante. A linha pontilhada é a meta da Gestão de Metas (Set → Dez).',acChartEfet(A));
  h+=acCard(3,'Alertas gerados e resolvidos por mês','Mostra se a efetividade mudou por mais resolução ou por menos geração.',acChartVol(A));
  h+=acCard(4,'Efetividade por hospital','Um painel por cliente, cada um com a sua própria meta. Escala 0–100% igual em todos.',acGrid(A));
  h+=acCard(5,'Penetração — hoje vs meta','Cobertura de escopos de cada cliente hoje, contra a meta do mês corrente.',acChartPen(A));
